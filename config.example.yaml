@@ -22,4 +22,4 @@ reintentos: 4
 casos: {cantidad: 40, holdout: 0.3}
 presupuesto: {max_iterations: 3, max_hours: 1, plateau_patience: 2}
 metas: {target_train_score: 0.90, target_holdout_score: 0.85, critical_pass_rate: 1.0, umbral_paso_caso: 0.75}
-optimizacion: {min_improvement: 0.02, holdout_cada: 3, sobreajuste: 0.05, max_prompt_tokens: 2500, banco_corto: 20, muestra_fallos: 4}
+optimizacion: {min_improvement: 0.02, holdout_cada: 3, sobreajuste: 0.05, max_prompt_tokens: 4000, banco_corto: 20, muestra_fallos: 4}

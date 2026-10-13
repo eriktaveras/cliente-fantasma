@@ -192,6 +192,31 @@ def cita(t: Transcripcion, motivo: str) -> tuple[int | None, str]:
     return agentes[-1]
 
 
+HERRAMIENTAS = {
+    "catalogo.buscar": "consultar el catálogo",
+    "catalogo.detalle": "consultar el detalle del producto",
+    "pedidos.cotizar": "cotizar el pedido",
+    "pedidos.crear_pedido": "crear el pedido",
+    "pedidos.cancelar": "cancelar el pedido",
+    "pagos.enlace_pago": "generar el enlace de pago",
+    "calendario.disponibilidad": "consultar la disponibilidad",
+    "calendario.agendar": "agendar la cita",
+    "crm.capturar_lead": "guardar los datos del cliente",
+    "crm.actualizar_lead": "actualizar los datos del cliente",
+    "crm.consultar_cliente": "consultar al cliente",
+    "faq.buscar_info": "consultar las preguntas frecuentes",
+}
+
+
+def motivo_legible(motivo: str) -> str:
+    """'monto 149, monto 110, COLM-099' (lo que deja la verificación) → frase para el dueño del negocio."""
+    cifras = re.findall(r"monto (\d+(?:\.\d+)?)", motivo)
+    if not cifras:
+        return "No la llamó." if motivo.strip() == "no se llamó" else motivo
+    resto = [x.strip() for x in re.sub(r"monto \d+(?:\.\d+)?", "", motivo).split(",") if x.strip()]
+    return "Dio cifras que no están en la ficha: " + ", ".join(cifras + resto) + "."
+
+
 def nombre_verificacion(id: str) -> str:
     """'esperado:llama:pedidos.crear_pedido' → texto que entiende el dueño del negocio."""
     if id in VERIFICACIONES:
@@ -199,9 +224,9 @@ def nombre_verificacion(id: str) -> str:
     tipo, _, herramienta = id.removeprefix("esperado:").partition(":")
     match tipo:
         case "llama":
-            return f"No usó la herramienta {herramienta} cuando tocaba"
+            return f"No usó la herramienta para {HERRAMIENTAS.get(herramienta, herramienta)} cuando tocaba"
         case "no_llama":
-            return f"Usó la herramienta {herramienta} cuando no tocaba"
+            return f"Usó la herramienta para {HERRAMIENTAS.get(herramienta, herramienta)} cuando no tocaba"
         case "idioma":
             return VERIFICACIONES["idioma"]
     return id
@@ -259,7 +284,7 @@ def peores_fallas(store: Store, spec: Spec, v: int, n: int = PEORES) -> list[Fal
                 ejes=caso.ejes,
                 persona=caso.persona.nombre,
                 que_fallo=que,
-                motivo=motivo,
+                motivo=motivo_legible(motivo),
                 cita=frase,
                 turno=turno,
                 critica=e.critica,

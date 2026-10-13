@@ -72,7 +72,7 @@ class Ficha(BaseModel):
     faltantes: list[str] = []
 
     def con_precio(self) -> list[Producto]:
-        return [p for p in self.productos if p.precio is not None and p.precio > 0]
+        return [p for p in self.productos if p.precio is not None and p.precio >= 0]
 
 
 def _avisar(progreso: Progreso, msg: str) -> None:

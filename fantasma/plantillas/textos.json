@@ -190,7 +190,8 @@
       "simulador": "Cliente fantasma",
       "juez": "Juez",
       "optimizador": "Optimizador del prompt",
-      "generador": "Ficha y casos"
+      "generador": "Casos de prueba",
+      "ficha": "Ficha del negocio"
     },
     "como_costos_rotulo": "LO QUE CUESTA",
     "como_costos": "Una prueba ligera (15 fantasmas, 1 ronda) cuesta entre US$0.20 y US$0.45 en Token Factory y tarda unos 2 minutos. Cada prueba tiene su tope de gasto y la demo tiene un tope diario.",
@@ -442,7 +443,8 @@
       "simulador": "Ghost customer",
       "juez": "Judge",
       "optimizador": "Prompt optimizer",
-      "generador": "Profile and test cases"
+      "generador": "Test cases",
+      "ficha": "Business profile"
     },
     "como_costos_rotulo": "WHAT IT COSTS",
     "como_costos": "A quick test (15 ghosts, 1 round) costs between US$0.20 and US$0.45 on Token Factory and takes about 2 minutes. Every test has its own spending cap and the demo has a daily cap.",

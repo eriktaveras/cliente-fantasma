@@ -78,7 +78,7 @@ def test_peores_fallas_sin_respuesta_del_bot_no_entran_y_las_citas_van_primero(s
     assert fallas[0].cita == "Sale en US$999." and fallas[0].turno == 1
     # Una falla de herramienta no tiene frase que marcar como "AQUÍ FALLÓ", y su id interno sale en texto legible.
     assert fallas[1].cita == "" and fallas[1].turno is None
-    assert fallas[1].que_fallo == "No usó la herramienta pedidos.crear_pedido cuando tocaba"
+    assert fallas[1].que_fallo == "No usó la herramienta para crear el pedido cuando tocaba"
 
 
 def test_que_fallo_expectativa_no_critica_con_juez_perfecto(spec, rubrica):
@@ -87,7 +87,7 @@ def test_que_fallo_expectativa_no_critica_con_juez_perfecto(spec, rubrica):
         verificaciones=[Verificacion(id="esperado:llama:catalogo.buscar", ok=False, critica=False, detalle="no se llamó"), Verificacion(id="idioma", ok=True)],
         j=juez(rubrica, {}),
     )
-    assert boleta._que_fallo(e, spec) == ("No usó la herramienta catalogo.buscar cuando tocaba", "no se llamó", False)
+    assert boleta._que_fallo(e, spec) == ("No usó la herramienta para consultar el catálogo cuando tocaba", "no se llamó", False)
     # Si el juez sí vio un criterio malo, manda el juez.
     c = rubrica.criterios[0]
     e.juez = juez(rubrica, {c.id: 2}, justificaciones={c.id: "turno 2: mal"})
@@ -297,3 +297,21 @@ def test_un_error_en_una_conversacion_frena_a_las_demas(servicio):
     assert estado == "error" and "402" in servicio.indice.obtener(run_id).motivo
     assert len(creados[-1].llamadas) == llamadas
     assert len(servicio.eventos.recientes(run_id)) == eventos and servicio.eventos.recientes(run_id)[-1]["tipo"] == "fin"
+
+
+def test_motivo_legible_para_el_dueno():
+    from fantasma.boleta import motivo_legible
+
+    assert motivo_legible("monto 149, monto 110, COLM-099") == "Dio cifras que no están en la ficha: 149, 110, COLM-099."
+    assert motivo_legible("no se llamó") == "No la llamó."
+    assert motivo_legible("Inventó el envío gratis") == "Inventó el envío gratis"
+
+
+def test_producto_gratis_entra_al_catalogo():
+    from decimal import Decimal
+
+    from fantasma.ficha import Ficha, Producto, a_datos, a_rubro
+
+    ficha = Ficha(negocio="DjangoBlaze", descripcion="d", rubro="software", productos=[Producto(nombre="Completa", precio=Decimal(99)), Producto(nombre="Gratis", precio=Decimal(0))])
+    datos = a_datos(ficha, a_rubro(ficha))
+    assert sorted(i.precio for i in datos.catalogo) == [Decimal(0), Decimal(99)]
