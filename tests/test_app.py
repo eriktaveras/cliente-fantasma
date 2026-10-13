@@ -152,6 +152,8 @@ def test_flujo_completo_ficha_vivo_boleta_publica(cliente, servicio):
     assert f">{b.mejor.nota}<" in boleta.text and "AQUÍ FALLÓ" in boleta.text and RESPUESTA_BOT in boleta.text
     assert {"Listo para atender", "Necesita ajustes", "No lo sueltes"} & {x for x in re.findall(r"</span>([^<]+)</p>", boleta.text)}
     assert "conversaciones.jsonl" in boleta.text
+    # Modo generado: no hay bot del dueño; la nota es del bot de prueba y el entregable es el prompt.
+    assert "armamos uno de prueba" in boleta.text and "TU SYSTEM PROMPT" in boleta.text and "ANTES Y DESPUÉS" not in boleta.text
     token = servicio.indice.obtener(run_id).token_publico
     assert f"http://testserver/b/{token}" in boleta.text
 
@@ -170,6 +172,7 @@ def test_boleta_en_ingles(cliente, servicio):
     lanzar(cliente, servicio, run_id)
     html = cliente.get(f"/corrida/{run_id}/boleta", headers={"accept-language": "en"}).text
     assert "FAILED HERE" in html and "Score by kind of ghost" in html and "Dominican Republic" in html
+    assert "YOUR SYSTEM PROMPT" in html and "test bot" in html
 
 
 def test_sse_repite_lo_guardado_y_respeta_last_event_id(cliente, servicio):
