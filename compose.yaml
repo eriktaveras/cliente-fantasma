@@ -8,6 +8,8 @@ services:
     image: cliente-fantasma:latest
     container_name: cliente-fantasma
     restart: unless-stopped
+    # El pool de subredes de Docker del Beelink está lleno: se reutiliza el bridge por defecto.
+    network_mode: bridge
     env_file: .env
     volumes:
       # Directorio, no archivo: cada corrida es runs/<id>/ y el índice vive en runs/indice.sqlite.
