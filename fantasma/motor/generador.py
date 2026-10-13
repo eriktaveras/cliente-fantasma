@@ -538,9 +538,11 @@ async def _lote_casos(
     )
 
     def validar(r: LoteCasos) -> list[str]:
-        problemas = [] if len(r.casos) == len(lote) else [f"se pidieron {len(lote)} casos y vinieron {len(r.casos)}"]
-        problemas += [f"caso {c.id}: '{e.tipo}' necesita herramienta" for c in r.casos for e in c.esperado if e.tipo in ("llama", "no_llama") and not e.herramienta]
-        return problemas
+        # Sin catálogo ni pedidos, Ultra pide llamar funciones que no existen y deja la herramienta vacía: esas expectativas
+        # se descartan (la rúbrica sigue evaluando el caso) en vez de gastar reintentos. Los casos de más los recorta el zip.
+        for c in r.casos:
+            c.esperado = [e for e in c.esperado if e.herramienta or e.tipo not in ("llama", "no_llama")]
+        return [] if len(r.casos) >= len(lote) else [f"se pidieron {len(lote)} casos y vinieron {len(r.casos)}"]
 
     return (await _pedir(llm, instrucciones, esquema_lote(funciones), validar, f"casos ({lote[0].escenario}…)", progreso)).casos
 
@@ -576,9 +578,16 @@ async def generar_casos(llm, rubro: RubroSpec, reglas: list[Regla], caja: Caja, 
     ids: set[str] = set()
     for i in range(0, len(lista), TAM_LOTE_CASOS):
         lote = lista[i : i + TAM_LOTE_CASOS]
-        borradores = await _lote_casos(llm, rubro, reglas, funciones, lote, propios, [c.persona.nombre for c in casos], progreso)
+        try:
+            borradores = await _lote_casos(llm, rubro, reglas, funciones, lote, propios, [c.persona.nombre for c in casos], progreso)
+        except ErrorTecnico as exc:
+            # Un lote que no valida no tumba la corrida: se sigue con los demás mientras quede al menos la mitad de los casos.
+            _avisar(progreso, f"se omiten {len(lote)} casos: {exc}")
+            continue
         casos += [armar_caso(b, f, funciones, ids, progreso) for b, f in zip(borradores, lote)]
         _avisar(progreso, f"casos: {len(casos)}/{len(lista)}")
+    if len(casos) * 2 < len(lista):
+        raise ErrorTecnico(f"{ROL}: solo salieron {len(casos)} de {len(lista)} casos")
     return casos
 
 
