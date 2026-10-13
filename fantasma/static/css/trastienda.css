@@ -1,0 +1,2358 @@
+/* ===========================================================================
+   trastienda.css: la cascara del back office del CRM y las piezas que
+   comparten sus zonas
+
+   Portado de cursos.eriktaveras.com (static/css/trastienda.css), el mismo
+   sistema Taller. Se carga DESPUES de taller.css y vive de sus tokens: ni un
+   color nuevo. Lo que ya existe alli se usa tal cual (.pildora, .aviso,
+   .isla, .avance, .boton, .enlace-mono, .casilla__control, .rotulo, .icono)
+   y aqui solo esta lo que no existe alli.
+
+   Referencia: design/*.dc.html. Main.dc.html es la cascara de escritorio y
+   MovilInicio.dc.html la del telefono.
+
+   Todas las clases de este archivo empiezan por tras-. Lo que es de una zona
+   va en css/zona-<zona>.css; si una pieza la piden dos zonas, sube aqui.
+
+   Cortes: los de taller.css (600, 760, 1000, 1240) y ninguno mas. El de la
+   cascara es 1000: por debajo, la barra lateral se pliega a un menu.
+
+   Indice
+     1. Pagina y cabecera
+     2. Barra lateral
+     3. Principal, encabezado y migas
+     4. Avisos y mensajes
+     5. Cajas, cifras y detalle
+     6. Pestanas y segmentos
+     7. Botones
+     8. Tabla
+     9. Formulario compacto (campo, grupo, opciones, radios, interruptor)
+    10. Panel lateral
+    11. Zona de soltar y barra de subida
+    12. Rejillas, paginas y vacio
+   =========================================================================== */
+
+/* ------------------------------------------------------ 1. pagina/cabecera */
+
+/* La trastienda lee a 16px y no a los 17 de la tienda: es una herramienta de
+   listas y formularios, y el canvas esta dibujado a 16. Los campos se quedan
+   en 16, que es el minimo por debajo del cual el Safari del iPhone hace zoom. */
+.pagina--trastienda {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* El atributo hidden gana siempre. Sin esto, un .boton escondido con hidden
+   (Cancelar la subida, Deshacer) seguia a la vista: el display: inline-flex de
+   .boton pesa mas que el display: none del navegador. Lo encontro la zona del
+   temario y vale para todas. */
+.pagina--trastienda [hidden] { display: none !important; }
+
+/* La cabecera se queda arriba al desplazar: el buscador y Salir tienen que
+   estar a mano en un temario de 44 lecciones. El filo de 1.5px de tinta es el
+   que dice "trastienda" (el de la tienda es la linea fina). */
+.tras-cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--aire-xs);
+  height: 60px;
+  padding: 0 8px 0 4px;
+  background: var(--papel);
+  border-bottom: var(--borde-medio) solid var(--tinta);
+}
+
+.tras-cabecera__menu,
+.tras-cabecera__lupa {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.tras-cabecera__marca {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap);
+  min-width: 0;
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+.tras-cabecera__marca .marca__cuadro { width: 19px; height: 22px; }
+
+.tras-cabecera__nombre {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+/* El buscador y la cuenta no caben en 390px: la lupa lleva a la pagina de
+   buscar y la cuenta viaja dentro del menu. */
+.tras-buscador,
+.tras-cabecera__cuenta { display: none; }
+
+.tras-buscador {
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  max-width: 520px;
+  height: 44px;
+  padding: 0 14px;
+  border: var(--borde) solid var(--linea-fuerte);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  color: var(--tenue);
+}
+
+/* El aro de foco lo lleva la caja entera y no el <input>, que no tiene filo
+   propio: un aro dentro de otro filo se lee como un doble borde. */
+.tras-buscador:focus-within {
+  border-color: var(--tinta);
+  outline: 3px solid var(--verde-ink);
+  outline-offset: 2px;
+}
+
+.tras-buscador__entrada {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 15px;
+}
+
+.tras-buscador__entrada::placeholder { color: var(--tenue); }
+.tras-buscador__entrada:focus-visible { outline: none; }
+
+.tras-buscador__tecla {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: var(--borde) solid var(--linea);
+  border-radius: var(--r-sm);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--tenue);
+}
+
+/* Ver el sitio, quien entro y Salir: en la cabecera (escritorio) y dentro del
+   menu (telefono). Es el mismo parcial en los dos sitios. */
+.tras-cuenta__enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tap);
+  padding: 0 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--tinta-2);
+  text-decoration: none;
+}
+
+.tras-cuenta__enlace:hover { color: var(--tinta); }
+
+.tras-cuenta__separador {
+  width: 1px;
+  height: 20px;
+  background: var(--linea);
+}
+
+.tras-cuenta__usuario {
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+}
+
+.tras-cuenta__salir { display: flex; margin: 0; }
+
+.tras-cuenta__boton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: var(--borde-medio) solid var(--tinta);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tras-cuenta__boton:hover { background-color: rgba(16, 19, 24, 0.05); }
+
+/* En escritorio el buscador va centrado en el hueco entre la marca y la cuenta,
+   no pegado a la marca: con space-between el aire sobrante se reparte a los
+   dos lados del cuadro, como en Main.dc.html. Por eso la cuenta NO lleva
+   margin-left: auto, que se tragaria todo ese aire y empujaria el buscador a
+   la izquierda. */
+@media (min-width: 1000px) {
+  .tras-cabecera {
+    justify-content: space-between;
+    height: 72px;
+    gap: var(--aire-md);
+    padding: 0 32px;
+  }
+
+  .tras-cabecera__menu,
+  .tras-cabecera__lupa { display: none; }
+
+  .tras-cabecera__marca {
+    flex: 0 0 216px;
+    gap: 12px;
+  }
+
+  .tras-cabecera__marca .marca__cuadro { width: 22px; height: 25px; }
+
+  .tras-buscador { display: flex; }
+
+  .tras-cabecera__cuenta {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: var(--aire-xs);
+  }
+}
+
+/* ---------------------------------------------------------- 2. barra lateral */
+
+.tras-cuerpo {
+  flex: 1 0 auto;
+}
+
+.tras-lateral {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 16px 24px;
+  border-bottom: var(--borde) solid var(--linea);
+  background: var(--papel);
+}
+
+/* Con JavaScript, en el telefono la barra se esconde detras del boton de la
+   cabecera y abre a pantalla completa debajo de ella. Sin JavaScript se queda
+   abierta encima del contenido: larga, pero se puede usar. */
+.con-js .tras-lateral { display: none; }
+
+.con-js .tras-lateral.tras-lateral--abierta {
+  display: flex;
+  position: fixed;
+  top: 60px;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 25;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-bottom: 0;
+}
+
+.tras-lateral__rotulo {
+  display: block;
+  padding: 0 12px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+.tras-lateral__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tras-lateral__enlace {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--tinta-2);
+  text-decoration: none;
+}
+
+.tras-lateral__enlace:hover { background: var(--papel-2); color: var(--tinta); }
+
+/* La seccion activa es el unico bloque de tinta de la pantalla. El numero va
+   en el verde claro, que sobre la tinta da 9.7:1. */
+.tras-lateral__enlace--activo,
+.tras-lateral__enlace--activo:hover {
+  background: var(--tinta);
+  color: var(--papel-3);
+  font-weight: 600;
+}
+
+.tras-lateral__nombre { flex: 1 1 auto; }
+
+.tras-lateral__dato {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.tras-lateral__enlace--activo .tras-lateral__dato { color: var(--verde-claro); }
+
+.tras-lateral__cuenta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--aire-xs);
+  margin-top: var(--aire-sm);
+  padding: var(--aire-sm) 0 0;
+  border-top: var(--borde) solid var(--linea);
+}
+
+.tras-lateral__cuenta .tras-cuenta__separador { display: none; }
+
+.tras-lateral__pie {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: var(--aire-sm);
+  padding: var(--aire-sm) 12px 0;
+  border-top: var(--borde) solid var(--linea);
+}
+
+.tras-lateral__pie .tras-lateral__rotulo { padding: 0; }
+
+/* En escritorio el enlace al admin mide lo del canvas (32px): va solo, al pie
+   de una columna que no tiene nada al lado. En el menu del telefono conserva
+   los 48 de .enlace-mono. */
+@media (min-width: 1000px) {
+  .tras-lateral__pie .enlace-mono { min-height: 32px; }
+}
+
+/* Con el menu abierto, lo de debajo no se desplaza con el dedo. */
+.tras-menu-abierto { overflow: hidden; }
+
+@media (min-width: 1000px) {
+  .tras-cuerpo {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    min-height: calc(100vh - 72px);
+  }
+
+  /* En escritorio la barra se queda quieta mientras la pantalla se desplaza,
+     con el pie abajo del todo, como en el canvas. */
+  .tras-lateral,
+  .con-js .tras-lateral,
+  .con-js .tras-lateral.tras-lateral--abierta {
+    display: flex;
+    position: sticky;
+    top: 72px;
+    align-self: start;
+    height: calc(100vh - 72px);
+    overflow-y: auto;
+    padding: 28px 16px 32px;
+    bottom: auto;
+    border-bottom: 0;
+    border-right: var(--borde) solid var(--linea);
+  }
+
+  .tras-lateral__enlace { min-height: 44px; }
+
+  .tras-lateral__cuenta { display: none; }
+
+  .tras-lateral__pie { margin-top: auto; }
+
+  .tras-menu-abierto { overflow: visible; }
+}
+
+/* ------------------------------------------ 3. principal, encabezado, migas */
+
+.tras-principal {
+  min-width: 0;
+  padding: 24px 20px 48px;
+}
+
+@media (min-width: 760px) {
+  .tras-principal { padding: 32px 32px 56px; }
+}
+
+@media (min-width: 1000px) {
+  .tras-principal { padding: 32px 40px 64px; }
+}
+
+.tras-encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--aire-sm) var(--aire-md);
+  margin-bottom: var(--aire-md);
+}
+
+.tras-encabezado__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* 52px en el telefono y 64 en escritorio, como en MovilInicio.dc.html y
+   Main.dc.html. Con un clamp por el ancho de la ventana el titulo del telefono
+   se quedaba en 49px. */
+.tras-encabezado__titulo {
+  font-size: 52px;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1000px) {
+  .tras-encabezado__titulo { font-size: 64px; }
+}
+
+.tras-encabezado__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.tras-encabezado__acciones:empty { display: none; }
+
+/* La linea de debajo del titulo: pildora de estado y datos en mono
+   ("/c/claude.../ · US$97 · 7 modulos"). */
+.tras-encabezado__datos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--tenue);
+}
+
+/* El dato de la derecha del titulo: "CALCULADO 13 SEP 2026 · 20:10". */
+.tras-encabezado__sello {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+}
+
+@media (min-width: 1000px) {
+  .tras-encabezado { margin-bottom: 32px; }
+}
+
+.tras-migas__lista {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+/* La barra va DETRAS de cada tramo y no delante del siguiente: cuando un
+   titulo largo parte las migas en dos renglones, la barra se queda al final
+   del primero y el segundo empieza limpio. */
+.tras-migas__tramo:not(:last-child)::after {
+  content: "/";
+  margin: 0 0.6em;
+}
+
+/* El tramo se pulsa, asi que crece por arriba y por abajo sin mover la linea:
+   36px de area de toque con el mismo alto de renglon del canvas. */
+.tras-migas__enlace {
+  display: inline-block;
+  padding: 10px 0;
+  margin: -10px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.tras-migas__enlace:hover {
+  color: var(--tinta);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* En el telefono las migas son un solo enlace de vuelta, "‹ Cursos", en la
+   grotesca y en tinta (MovilTemario.dc.html). Los demas tramos se esconden y,
+   sin tramo de vuelta, la nav entera (MovilInicio.dc.html). Cual es el tramo lo
+   decide el filtro miga_de_vuelta, no el CSS. */
+.tras-migas--sin-vuelta,
+.tras-migas__tramo { display: none; }
+
+.tras-migas__tramo--vuelta { display: block; }
+.tras-migas__tramo--vuelta:not(:last-child)::after { content: none; }
+
+.tras-migas__tramo--vuelta .tras-migas__enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0;
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--tinta);
+}
+
+@media (min-width: 1000px) {
+  .tras-migas--sin-vuelta,
+  .tras-migas__tramo,
+  .tras-migas__tramo--vuelta { display: block; }
+
+  .tras-migas__tramo--vuelta:not(:last-child)::after { content: "/"; }
+
+  .tras-migas__tramo--vuelta .tras-migas__enlace {
+    display: inline-block;
+    min-height: 0;
+    padding: 10px 0;
+    margin: -10px 0;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+  }
+
+  .tras-migas__flecha { display: none; }
+}
+
+/* ---------------------------------------------------- 4. avisos y mensajes */
+
+/* El aviso es .aviso de estilo.css con icono, titulo, detalle y salida. En el
+   telefono la salida baja debajo del texto, alineada con el texto y no con el
+   icono (MovilInicio.dc.html). */
+.tras-aviso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: var(--aire-sm);
+  color: var(--tinta-2);
+}
+
+.tras-aviso.aviso--verde { color: var(--verde-hondo); }
+.tras-aviso.aviso--ambar { color: var(--ambar-ink); }
+.tras-aviso.aviso--rojo { color: var(--rojo-ink); }
+
+.tras-aviso__icono {
+  align-self: flex-start;
+  margin-top: 3px;
+}
+
+.tras-aviso .aviso__texto { flex: 1 1 0; }
+
+.tras-aviso__titulo { font-size: 15px; font-weight: 700; }
+.tras-aviso__detalle { font-size: 15px; }
+
+.tras-aviso__accion {
+  display: inline-flex;
+  align-items: center;
+  flex-basis: 100%;
+  min-height: 44px;
+  padding-left: 31px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* En la caja blanca (nota) la salida va en tinta, como en el canvas. */
+.tras-aviso:not(.aviso--rojo):not(.aviso--ambar):not(.aviso--verde) .tras-aviso__accion { color: var(--tinta); }
+
+.tras-aviso__accion:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* El aviso que va dentro de un formulario o de una caja: sobre papel-4, para
+   que no se confunda con la caja blanca que lo contiene. */
+.tras-aviso--suave { background: var(--papel-4); }
+
+.tras-mensajes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: var(--aire-md);
+}
+
+.tras-avisos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 760px) {
+  .tras-aviso {
+    flex-wrap: nowrap;
+    padding: var(--aire-sm) var(--aire-md);
+  }
+
+  .tras-aviso__accion {
+    flex-basis: auto;
+    padding-left: 0;
+  }
+}
+
+/* --------------------------------------------- 5. cajas, cifras y detalle */
+
+/* Una caja de formulario o de consulta: .isla (o .isla.isla--suave) con su
+   cabecera en mono y una nota a la derecha (CursoFicha.dc.html). */
+.tras-caja__cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px var(--aire-sm);
+  padding: var(--aire-sm) 20px;
+  border-bottom: var(--borde) solid var(--linea);
+}
+
+.tras-caja__nota {
+  font-size: 14px;
+  color: var(--tenue);
+}
+
+.tras-caja__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aire-md);
+  padding: 20px;
+}
+
+/* Dentro de una caja o una pila el aire entre campos lo pone el hueco del
+   flex. El margen de .campo + .campo de estilo.css, sumado, lo doblaba. */
+.tras-caja__cuerpo > .campo + .campo,
+.tras-pila > .campo + .campo { margin-top: 0; }
+
+@media (min-width: 760px) {
+  .tras-caja__cabeza { padding: var(--aire-sm) var(--aire-md); }
+  .tras-caja__cuerpo { padding: var(--aire-md); }
+}
+
+/* La fila de cifras: celdas que se tocan y se separan con la linea de 1px, que
+   es el fondo de la rejilla asomando por el hueco. */
+.tras-cifras__rejilla {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--linea);
+}
+
+.tras-cifras__celda {
+  min-width: 0;
+  padding: var(--aire-sm);
+  background: var(--papel-3);
+}
+
+/* Una cifra suelta al final de una rejilla de dos ocupa la fila entera, en vez
+   de dejar un hueco gris donde iria la quinta. */
+.tras-cifras__celda:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+.tras-cifras__rotulo {
+  display: block;
+  margin-bottom: 10px;
+}
+
+/* La celda es contenedor de consulta: el numero se mide contra SU ancho, no
+   contra el de la ventana, que no sabe de la barra lateral ni de cuantas
+   columnas hay. */
+.tras-cifras__rejilla > .tras-cifras__celda { container-type: inline-size; }
+
+/* Un monto no se parte nunca ("US$498 / .60" se lee como otro numero), asi
+   que no salta de renglon: si no cabe a su talla, la talla baja lo justo.
+   parciales/cifras.html pone en --largo cuantos caracteres tiene, y en la
+   mono de la casa cada uno mide 0.6em, asi que 100cqi / (largo x 0.6) es la
+   talla que llena la celda. Un "4" se queda en la talla del canvas y
+   "US$12,480.00" baja a lo que cabe, tambien a 390 con dos columnas. Sin
+   unidades de contenedor se queda la primera talla. */
+.tras-cifras__numero {
+  display: block;
+  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 26px;
+  font-size: min(26px, calc(100cqi / (var(--largo, 1) * 0.6)));
+  font-weight: 700;
+  line-height: 1;
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tras-cifras__pie {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 7px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--tenue);
+}
+
+.tras-cifras__delta {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Las medidas: rotulo y cifra en una linea, la barra y el pie. */
+.tras-cifras--medidas .tras-cifras__rejilla {
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--linea-suave);
+}
+
+.tras-cifras--medidas .tras-cifras__celda:last-child:nth-child(odd) { grid-column: auto; }
+
+.tras-cifras__cabeza {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--aire-sm);
+  margin-bottom: 8px;
+}
+
+.tras-cifras__cifra {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tinta);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tras-cifras--medidas .tras-cifras__pie {
+  display: block;
+  margin-top: 8px;
+}
+
+/* El tono de un texto suelto (un delta, un pie). Texto, nunca fondo.
+
+   La clase va doble a proposito: el tono se pone ENCIMA de la pieza de una
+   zona (.tras-cursos-tarjeta__pie con su gris), y esa hoja se carga despues
+   que esta. Con la misma fuerza ganaba el gris y "1 error" salia sin rojo en
+   la tarjeta del curso. */
+.tras-tono--verde.tras-tono--verde { color: var(--verde-ink); }
+.tras-tono--ambar.tras-tono--ambar { color: var(--ambar-ink); }
+.tras-tono--rojo.tras-tono--rojo { color: var(--rojo-ink); }
+
+@media (min-width: 760px) {
+  .tras-cifras--medidas .tras-cifras__rejilla,
+  .tras-cifras--3 .tras-cifras__rejilla { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .tras-cifras--medidas .tras-cifras__celda { padding: 20px var(--aire-md); }
+}
+
+@media (min-width: 1000px) {
+  .tras-cifras__celda { padding: var(--aire-md); }
+  .tras-cifras__rotulo { margin-bottom: var(--aire-sm); }
+  .tras-cifras__numero {
+    margin-bottom: 10px;
+    font-size: 34px;
+    font-size: min(34px, calc(100cqi / (var(--largo, 1) * 0.6)));
+  }
+}
+
+/* Cuatro en fila desde 1240. De 1000 a 1239, con la barra lateral de 248, cada
+   celda se quedaba en 118 px de contenido y los montos salian partidos; ahi
+   siguen dos por fila, como en el telefono. */
+@media (min-width: 1240px) {
+  .tras-cifras__rejilla { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .tras-cifras__celda:last-child:nth-child(odd) { grid-column: auto; }
+}
+
+/* El detalle de una ficha: renglones de rotulo y valor (la venta, el estado en
+   Bunny). Es un <dl>. */
+.tras-detalle { margin: 0; }
+
+.tras-detalle__fila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--aire-sm);
+  padding: 9px 0;
+  border-bottom: var(--borde) solid var(--linea-suave);
+}
+
+.tras-detalle__rotulo {
+  flex: 0 0 auto;
+  font-size: 14px;
+  color: var(--tenue);
+}
+
+.tras-detalle__valor {
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
+  color: var(--tinta);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.tras-detalle__valor--mono { font-family: var(--mono); }
+
+/* ------------------------------------------------ 6. pestanas y segmentos */
+
+/* Las pestanas cambian de PANTALLA (la ficha del curso). Subrayadas con la
+   tinta y, en el telefono, se desplazan de lado en vez de partirse. */
+.tras-pestanas {
+  margin-bottom: var(--aire-md);
+  border-bottom: var(--borde) solid var(--linea);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tras-pestanas::-webkit-scrollbar { display: none; }
+
+.tras-pestanas__lista {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tras-pestanas__enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--tap);
+  padding: 0 12px;
+  border-bottom: var(--borde-fuerte) solid transparent;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--tinta-2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tras-pestanas__enlace:hover { color: var(--tinta); border-bottom-color: var(--linea-fuerte); }
+
+.tras-pestanas__enlace--activa,
+.tras-pestanas__enlace--activa:hover {
+  border-bottom-color: var(--tinta);
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.tras-pestanas__cuenta {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--tenue);
+}
+
+.tras-pestanas__enlace--activa .tras-pestanas__cuenta { font-weight: 500; color: var(--tinta-2); }
+
+/* La fila de las pestanas con acciones a la derecha (Vista previa, Ver como
+   alumno). El filo lo lleva la fila y no las pestanas. */
+.tras-barra-pestanas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px var(--aire-md);
+  margin-bottom: var(--aire-md);
+  border-bottom: var(--borde) solid var(--linea);
+}
+
+.tras-barra-pestanas .tras-pestanas {
+  min-width: 0;
+  max-width: 100%;
+  margin-bottom: -1px;
+  border-bottom: 0;
+}
+
+/* Por debajo de 1000 la fila va de filo a filo, como en MovilTemario.dc.html:
+   la linea cruza la pantalla y la ultima pestana se corta en el borde, que es
+   lo que dice que la fila se desplaza. Se come el aire de .tras-principal (20 y
+   32) y lo devuelve por dentro, para que "Ficha" siga alineada con el titulo. */
+.tras-barra-pestanas { margin-inline: -20px; }
+.tras-barra-pestanas .tras-pestanas { flex: 1 1 auto; padding-inline: 20px; }
+
+@media (min-width: 760px) {
+  .tras-barra-pestanas { margin-inline: -32px; }
+  .tras-barra-pestanas .tras-pestanas { padding-inline: 32px; }
+}
+
+.tras-barra-pestanas__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+/* Vista previa y Ver como alumno no salen en el telefono (MovilTemario.dc.html):
+   alli se sube y se revisa video, y lo demas es de escritorio (decision 3). */
+.tras-barra-pestanas__acciones--escritorio { display: none; }
+
+@media (min-width: 1000px) {
+  .tras-pestanas__enlace { padding: 0 16px; }
+  .tras-barra-pestanas__acciones--escritorio { display: flex; }
+  .tras-barra-pestanas { margin-inline: 0; }
+  .tras-barra-pestanas .tras-pestanas { flex: 0 1 auto; padding-inline: 0; }
+  .tras-pestanas,
+  .tras-barra-pestanas { margin-bottom: 32px; }
+  .tras-barra-pestanas .tras-pestanas { margin-bottom: -1px; }
+}
+
+/* Los segmentos cambian lo que se LISTA en la misma pantalla (Todas,
+   Completadas, Creadas). El conmutador gris del canvas. */
+.tras-segmentos {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tras-segmentos::-webkit-scrollbar { display: none; }
+
+.tras-segmentos__lista {
+  display: inline-flex;
+  gap: 4px;
+  min-height: 44px;
+  margin: 0;
+  padding: 4px;
+  border-radius: var(--r-md);
+  background: var(--papel-2);
+  list-style: none;
+}
+
+.tras-segmentos__lista > li { display: flex; }
+
+/* Se ve de 36 dentro de la caja de 44, como en el canvas, y se pulsa de 44:
+   el ::after cubre los 4 px de relleno de la lista y la mitad del hueco con el
+   vecino, que antes no respondian (CONTRATO 15.6). */
+.tras-segmentos__enlace::after {
+  content: "";
+  position: absolute;
+  inset: -4px -2px;
+}
+
+.tras-segmentos__enlace {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tinta-2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tras-segmentos__enlace:hover { color: var(--tinta); }
+
+.tras-segmentos__enlace--activa {
+  background: var(--papel-3);
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.tras-segmentos__cuenta {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--tenue);
+}
+
+/* ------------------------------------------------------------ 7. botones */
+
+/* Los botones son .boton de estilo.css. Aqui solo cambia la talla: el de la
+   trastienda mide 44 y lee a 15, porque van de a dos o tres en una fila (Vista
+   previa y Abrir temario). El primario conserva sus 56: es el que guarda.
+
+     <a class="boton boton--fantasma tras-boton">Vista previa</a>
+     <button class="boton boton--primario boton--bloque">Guardar cambios</button> */
+.boton.tras-boton {
+  min-height: 44px;
+  padding: 0 18px;
+  gap: 8px;
+  font-size: 15px;
+}
+
+/* El que devuelve dinero o borra. Rojo relleno con blanco (8.3:1 del rojo
+   contra el blanco). Al pasar el raton se oscurece con la misma capa de tinta
+   que usa .boton, sin inventar un rojo mas oscuro. */
+.boton.tras-boton--peligro {
+  background-color: var(--rojo-ink);
+  border-color: var(--rojo-ink);
+  color: var(--papel-3);
+}
+
+.boton.tras-boton--peligro:hover {
+  background-image: linear-gradient(rgba(16, 19, 24, 0.18), rgba(16, 19, 24, 0.18));
+}
+
+/* El que arregla algo roto sin ser destructivo: "Volver a subir". */
+.boton.tras-boton--rojo {
+  background-color: var(--papel-3);
+  border-color: var(--rojo-ink);
+  color: var(--rojo-ink);
+}
+
+.boton.tras-boton--rojo:hover { background-color: var(--rojo-bg); }
+
+/* Borrar como enlace, al final de un formulario: no compite con Guardar. */
+.tras-enlace-peligro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--rojo-ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tras-enlace-peligro:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* Un <form> que solo lleva un boton (revocar, cancelar orden) no tiene que
+   romper la fila en la que va. */
+.tras-form-boton { display: inline-flex; margin: 0; }
+
+/* ------------------------------------------------------ selector de mes */
+
+/* "‹ SEPTIEMBRE 2026 ›": una sola pieza de filo medio, con la flecha de
+   avanzar apagada en el mes de hoy. Nacio en Ventas; la usa tambien la
+   pestana Metricas del curso, por eso vive aqui y no en una hoja de zona.
+     {% include "trastienda/parciales/selector_mes.html" with selector=selector only %} */
+.tras-mes {
+  display: inline-flex;
+  align-items: stretch;
+  height: 44px;
+  border: var(--borde-medio) solid var(--tinta);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  overflow: hidden;
+}
+
+.tras-mes__flecha {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  color: var(--tinta);
+}
+
+.tras-mes__flecha:first-child { border-right: var(--borde) solid var(--linea); }
+.tras-mes__flecha:last-child { border-left: var(--borde) solid var(--linea); }
+
+a.tras-mes__flecha:hover { background: var(--papel-2); }
+
+.tras-mes__flecha--apagada { color: var(--linea-fuerte); }
+
+.tras-mes__etiqueta {
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta);
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------- 8. tabla */
+
+/* La tabla va dentro de una .isla. El contenedor desplaza de lado en el
+   telefono, que es lo unico que puede hacer una tabla de siete columnas en
+   390px sin mentir sobre sus datos.
+
+     <div class="isla"><div class="tras-tabla"><table class="tras-tabla__tabla">... */
+/* position: relative para que un .oculto-visual de dentro (absoluto) quede
+   recortado por la caja y no estire la pagina en el telefono (lo encontro la
+   zona sistema). */
+.tras-tabla {
+  position: relative;
+  overflow-x: auto;
+}
+
+.tras-tabla__tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.tras-tabla__tabla caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tras-tabla__tabla th {
+  padding: 14px 12px;
+  border-bottom: var(--borde-medio) solid var(--tinta);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--tenue);
+  white-space: nowrap;
+}
+
+.tras-tabla__tabla td {
+  height: 64px;
+  padding: 10px 12px;
+  border-bottom: var(--borde) solid var(--linea-suave);
+  vertical-align: middle;
+  color: var(--tinta);
+}
+
+.tras-tabla__tabla th:first-child,
+.tras-tabla__tabla td:first-child { padding-left: 20px; }
+
+.tras-tabla__tabla th:last-child,
+.tras-tabla__tabla td:last-child { padding-right: 20px; }
+
+.tras-tabla__tabla tbody tr:last-child td { border-bottom: 0; }
+
+/* La fila entera se pulsa, pero NO con un ::after estirado sobre la fila.
+   Ese truco depende de que la <tr> con position: relative sea el bloque que
+   contiene al ::after, y Safari no lo respeto en esta tabla (border-collapse y
+   un contenedor con scroll): el ::after de la ULTIMA fila tapaba la tabla y la
+   pagina entera, y cualquier clic abria la misma venta (14-sep-2026, Safari
+   26.6.2; Chromium y el WebKit de Playwright no lo reproducian). Ahora el nombre
+   es un enlace normal y static/js/trastienda.js (punto 5) lleva el clic del
+   resto de la fila a ese enlace. Sin JavaScript se pulsa el nombre. Solo UN
+   enlace por fila lleva la clase .tras-tabla__enlace. */
+.tras-tabla__tabla tbody tr:hover { background: var(--papel-4); }
+.tras-tabla__tabla tbody tr:has(.tras-tabla__enlace) { cursor: pointer; }
+
+.tras-tabla__enlace {
+  color: inherit;
+  text-decoration: none;
+}
+
+.tras-tabla__enlace:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.tras-tabla__tabla td .boton,
+.tras-tabla__tabla td form { position: relative; z-index: 1; }
+
+.tras-tabla__fila--alerta,
+.tras-tabla__tabla tbody tr.tras-tabla__fila--alerta:hover { background: var(--rojo-bg); }
+
+.tras-tabla__fila--elegida,
+.tras-tabla__tabla tbody tr.tras-tabla__fila--elegida:hover { background: var(--papel-2); }
+
+.tras-tabla__principal { font-size: 16px; color: var(--tinta); }
+.tras-tabla__secundario { font-size: 14px; color: var(--tenue); }
+
+.tras-tabla__tabla .tras-tabla__num {
+  text-align: right;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tras-tabla__tabla .tras-tabla__mono {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--tinta-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.tras-tabla__pie {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px var(--aire-sm);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+@media (min-width: 760px) {
+  .tras-tabla__tabla th:first-child,
+  .tras-tabla__tabla td:first-child { padding-left: var(--aire-md); }
+
+  .tras-tabla__tabla th:last-child,
+  .tras-tabla__tabla td:last-child { padding-right: var(--aire-md); }
+}
+
+/* ------------------------------------------------ 9. formulario compacto */
+
+/* El campo es .campo de estilo.css (etiqueta, pista, error). El control es
+   mas chico que el de la compra: 16px y filo fino, porque aqui hay quince
+   campos por pantalla y no dos. El obligatorio que manda (el titulo, el
+   precio) lleva el filo medio de tinta con --fuerte. */
+.tras-campo__cabeza {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tras-campo__dato {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+.tras-campo__opcional { font-weight: 400; color: var(--tenue); }
+
+.tras-campo--casilla { display: grid; gap: 6px; }
+
+.tras-entrada {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 12px 16px;
+  border: var(--borde) solid var(--linea-fuerte);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.tras-entrada::placeholder { color: var(--tenue); }
+
+.tras-entrada:focus { border-color: var(--tinta); }
+
+.tras-entrada--fuerte { border: var(--borde-medio) solid var(--tinta); }
+
+.tras-entrada--mono {
+  font-family: var(--mono);
+  font-size: 15px;
+}
+
+.tras-entrada--area {
+  min-height: 112px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+/* La flecha de la lista se dibuja a mano: la nativa llega distinta en cada
+   sistema. El trazo es --tinta-2 escrito en hexadecimal porque un data: URI
+   no lee variables. */
+.tras-entrada--lista {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 44px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23353B44' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px 14px;
+}
+
+.tras-entrada--archivo { padding: 10px 12px; font-size: 15px; }
+
+.campo--invalido .tras-entrada,
+.tras-entrada[aria-invalid="true"] { border-color: var(--rojo-ink); }
+
+/* Campos en fila: dos o tres de frente desde 760 (precio, lanzamiento, hasta
+   cuando). Dentro no hay margen entre campos: lo pone el hueco. */
+.tras-campos {
+  display: grid;
+  gap: var(--aire-sm);
+}
+
+.tras-campos > .campo + .campo { margin-top: 0; }
+
+@media (min-width: 760px) {
+  .tras-campos--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tras-campos--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* El control con prefijo: "US$ 97.00", "/aula/claude.../ subele-tus-documentos". */
+.tras-grupo {
+  display: flex;
+  align-items: stretch;
+  min-height: var(--tap);
+  border: var(--borde) solid var(--linea-fuerte);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  overflow: hidden;
+}
+
+.tras-grupo:focus-within {
+  border-color: var(--tinta);
+  outline: 3px solid var(--verde-ink);
+  outline-offset: 2px;
+}
+
+.tras-grupo__prefijo {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0 14px;
+  border-right: var(--borde) solid var(--linea);
+  background: var(--papel-4);
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--tenue);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tras-grupo .tras-entrada {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.tras-grupo .tras-entrada:focus-visible { outline: none; }
+
+/* Opciones de una sola eleccion pintadas como botones (Nivel, Publicacion,
+   Ahora u Otra fecha). Son radios de verdad: el <input> se esconde a la vista y
+   sigue en el orden del teclado, y la caja se pinta con :has().
+
+     <div class="tras-opciones tras-opciones--3">
+       <label class="tras-opcion"><input class="tras-opcion__control" type="radio" name="nivel" value="basico"> Basico</label>
+       ... */
+.tras-opciones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (min-width: 600px) {
+  .tras-opciones--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 420px; }
+  .tras-opciones--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.tras-opcion {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: var(--borde) solid var(--linea-fuerte);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--tinta-2);
+  text-align: center;
+  cursor: pointer;
+}
+
+.tras-opcion__control {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tras-opcion:has(.tras-opcion__control:focus-visible) {
+  outline: 3px solid var(--verde-ink);
+  outline-offset: 2px;
+}
+
+.tras-opcion:has(.tras-opcion__control:checked) {
+  border: var(--borde-medio) solid var(--tinta);
+  background: var(--tinta);
+  font-weight: 600;
+  color: var(--papel-3);
+}
+
+/* Las de estado llevan el color del estado al marcarse (Preventa en ambar). */
+.tras-opcion--ambar:has(.tras-opcion__control:checked) {
+  border-color: var(--ambar-ink);
+  background: var(--ambar-bg);
+  color: var(--ambar-ink);
+}
+
+.tras-opcion--verde:has(.tras-opcion__control:checked) {
+  border-color: var(--verde-accion);
+  background: var(--verde-bg);
+  color: var(--verde-hondo);
+}
+
+.tras-opcion--apagada:has(.tras-opcion__control:checked) {
+  border-color: var(--tinta-2);
+  background: var(--papel-2);
+  color: var(--tinta);
+}
+
+/* La lista de radios con su circulo (el motivo del reembolso). */
+.tras-radios {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tras-radio {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: var(--borde) solid var(--linea);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  font-size: 15px;
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.tras-radio:has(.tras-radio__control:checked) {
+  border: var(--borde-medio) solid var(--tinta);
+  background: var(--papel-4);
+}
+
+.tras-radio__control {
+  flex: 0 0 auto;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: var(--borde-medio) solid var(--tinta);
+  border-radius: 50%;
+  background: var(--papel-3);
+  cursor: pointer;
+}
+
+.tras-radio__control:checked {
+  border-color: var(--verde-accion);
+  background: var(--verde-accion);
+  box-shadow: inset 0 0 0 3px var(--papel-3);
+}
+
+/* El interruptor de encendido (Activo, en la tarjeta del cupon). Es un
+   checkbox con role="switch": se lee "activado, desactivado" y se pulsa con
+   la barra espaciadora.
+
+     <label class="tras-interruptor"><span>Activo</span>
+       <input class="tras-interruptor__control" type="checkbox" role="switch" checked></label> */
+.tras-interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.tras-interruptor__control {
+  position: relative;
+  flex: 0 0 auto;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 44px;
+  height: 26px;
+  margin: 0;
+  border-radius: 13px;
+  background: var(--linea-fuerte);
+  cursor: pointer;
+  transition: background-color 0.15s var(--ease);
+}
+
+.tras-interruptor__control::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--papel-3);
+  transition: transform 0.15s var(--ease);
+}
+
+.tras-interruptor__control:checked { background: var(--verde-accion); }
+.tras-interruptor__control:checked::before { transform: translateX(18px); }
+
+/* La fila de los botones de un formulario: Guardar a la izquierda, Borrar al
+   filo derecho. */
+.tras-form-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.tras-form-pie__derecha { margin-left: auto; }
+
+/* ---------------------------------------------------------- 10. panel lateral */
+
+.tras-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  /* La tinta al 18%, como en Ventas.dc.html. */
+  background: rgba(16, 19, 24, 0.18);
+}
+
+.tras-panel-lateral {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--papel-3);
+  overflow: hidden;
+}
+
+/* El foco que le pone trastienda.js al abrir es para que el lector de pantalla
+   empiece a leer aqui, no para pulsar nada: la caja no lleva aro. Lo que se
+   pulsa dentro (la X, los campos) si lo lleva. */
+.tras-panel-lateral:focus,
+.tras-panel-lateral:focus-visible { outline: none; }
+
+.tras-panel-lateral__barra {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aire-sm);
+  height: 60px;
+  padding: 0 8px 0 20px;
+  border-bottom: var(--borde) solid var(--linea);
+}
+
+.tras-panel-lateral__rotulo {
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+}
+
+.tras-panel-lateral__cerrar {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap);
+  height: var(--tap);
+  border-radius: var(--r-md);
+  color: var(--tinta);
+}
+
+.tras-panel-lateral__cerrar:hover { background: var(--papel-2); }
+
+.tras-panel-lateral__cuerpo {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 20px 32px;
+}
+
+@media (min-width: 600px) {
+  .tras-panel-lateral {
+    width: 440px;
+    border-left: var(--borde-fuerte) solid var(--tinta);
+  }
+
+  .tras-panel-lateral__barra {
+    height: 72px;
+    padding: 0 12px 0 28px;
+  }
+
+  .tras-panel-lateral__cuerpo { padding: 28px 28px 32px; }
+}
+
+/* ------------------------------------- 11. zona de soltar y barra de subida */
+
+/* Donde se suelta un archivo. El <input type="file"> va dentro, escondido a la
+   vista y no al teclado, y el boton "o eligelo" es su <label>. La clase
+   --activa la pone el JavaScript de la zona mientras hay un archivo encima. */
+.tras-soltar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 160px;
+  padding: var(--aire-md) var(--aire-sm);
+  border: var(--borde-medio) dashed var(--linea-fuerte);
+  border-radius: var(--r-lg);
+  background: var(--papel-4);
+  color: var(--tinta-2);
+  text-align: center;
+}
+
+.tras-soltar--activa {
+  border-color: var(--verde-accion);
+  background: var(--verde-bg);
+}
+
+.tras-soltar:focus-within {
+  outline: 3px solid var(--verde-ink);
+  outline-offset: 2px;
+}
+
+.tras-soltar__titulo {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.tras-soltar__nota {
+  font-family: var(--mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+.tras-soltar__control {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* La subida en curso, en el recuadro del video (Leccion.dc.html). Es el unico
+   bloque de tinta de la pantalla: lo que esta pasando ahora en este navegador
+   y que se pierde si se cierra la pestana. */
+.tras-subida {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--aire-sm);
+  min-height: 280px;
+  padding: var(--aire-md) 20px;
+  border-radius: var(--r-md);
+  background: var(--tinta);
+  color: var(--papel-3);
+  text-align: center;
+}
+
+.tras-subida__icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: var(--borde-medio) solid var(--verde-claro);
+  border-radius: 50%;
+  color: var(--verde-claro);
+}
+
+.tras-subida__archivo {
+  max-width: 100%;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--linea);
+  overflow-wrap: anywhere;
+}
+
+.tras-subida__porcentaje {
+  font-family: var(--mono);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tras-subida__barra {
+  width: min(440px, 100%);
+  height: 6px;
+  border-radius: 3px;
+  background: var(--tinta-2);
+  overflow: hidden;
+}
+
+.tras-subida__relleno {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--verde-claro);
+}
+
+.tras-subida__datos {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--linea);
+  font-variant-numeric: tabular-nums;
+}
+
+.tras-subida__nota {
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--linea);
+}
+
+.tras-subida__boton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: var(--borde-medio) solid var(--tenue);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--papel-3);
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tras-subida__boton:hover { border-color: var(--papel-3); }
+
+/* La pildora de lo que pasa ahora: "SUBIENDO 42%". Tinta con el punto verde. */
+.pildora.pildora--tinta {
+  border-color: var(--tinta);
+  background: var(--tinta);
+  color: var(--papel-3);
+}
+
+.pildora--tinta .pildora__punto { background: var(--verde-claro); }
+
+@media (min-width: 760px) {
+  /* max-width y sin el min-height de la base: con los dos, el aspect-ratio
+     obligaba a 498 px de ancho y el recuadro se salia de su columna. */
+  .tras-subida {
+    aspect-ratio: 16 / 9;
+    max-width: 100%;
+    min-height: 0;
+    padding: 32px;
+  }
+
+  .tras-subida__porcentaje { font-size: 56px; }
+}
+
+/* ----------------------------------------------------- 12. rejillas y vacio */
+
+/* La pantalla con su columna de la derecha (la ficha con Publicacion, la
+   leccion con Estado en Bunny, cupones con Nuevo cupon). En el telefono la
+   columna baja debajo. El ancho de la derecha se ajusta con la variable.
+
+   La columna se abre en 1240 y no en 1000: con la barra lateral de 248 y 360
+   (o 400) a la derecha, a 1000 la columna principal quedaba en 280 px, el
+   precio no se leia, el recuadro del video tapaba la caja de Bunny y los
+   montos de un cupon salian letra por letra. De 1000 a 1239 la columna baja
+   debajo, como en el telefono. */
+.tras-con-lateral {
+  display: grid;
+  gap: var(--aire-md);
+  align-items: start;
+}
+
+@media (min-width: 1240px) {
+  .tras-con-lateral {
+    grid-template-columns: minmax(0, 1fr) var(--ancho-lateral, 360px);
+    gap: 32px;
+  }
+}
+
+.tras-pila {
+  display: flex;
+  flex-direction: column;
+  gap: var(--aire-md);
+  min-width: 0;
+}
+
+.tras-pila--apretada { gap: 10px; }
+
+/* Anterior, "1 / 4" y Siguiente (parciales/paginas.html). El boton sin pagina
+   a la que ir se queda en su sitio, apagado y sin filo de tinta: no es un <a>
+   y no se enfoca. */
+.tras-paginas {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.boton.tras-paginas__boton {
+  padding: 0 16px;
+  font-weight: 500;
+}
+
+.boton.tras-paginas__boton.boton--fantasma { background: var(--papel-3); }
+
+.boton.tras-paginas__boton--apagado,
+.boton.tras-paginas__boton--apagado:hover {
+  border: var(--borde) solid var(--linea);
+  background: transparent;
+  color: var(--linea-fuerte);
+  cursor: default;
+}
+
+.tras-paginas__numero {
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--tinta-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lo que no tiene filas todavia. Filo discontinuo: la pieza que falta. */
+.tras-vacio {
+  padding: var(--aire-md);
+  border: var(--borde-medio) dashed var(--linea-fuerte);
+  border-radius: var(--r-lg);
+  font-size: 15px;
+  color: var(--tinta-2);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tras-interruptor__control,
+  .tras-interruptor__control::before { transition: none; }
+}
+
+
+/* ===========================================================================
+   13. Lo propio del CRM (cimientos, 17-sep-2026)
+   =========================================================================== */
+
+/* Una pantalla que todavia no define {% block titulo %} no pinta la fila del
+   titulo vacia. Cuando todas lo definan, esta regla no hace nada. */
+.tras-encabezado:has(.tras-encabezado__titulo:empty) { display: none; }
+
+[x-cloak] { display: none !important; }
+
+/* Alias de la clase vieja de "solo para lector de pantalla". */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.tras-lateral__rotulo--separado { padding-top: 22px; }
+
+.tras-lateral__dato--rojo { color: var(--rojo-ink); font-weight: 600; }
+.tras-lateral__dato--verde { color: var(--verde-ink); }
+.tras-lateral__dato--ambar { color: var(--ambar-ink); }
+
+/* Sobre la tinta del activo, el rojo de la casa no se lee (2.1:1): va el
+   salmon claro, que da 10:1, y el verde claro de siempre. */
+.tras-lateral__enlace--activo .tras-lateral__dato--rojo { color: #F6B3A3; }
+.tras-lateral__enlace--activo .tras-lateral__dato--verde,
+.tras-lateral__enlace--activo .tras-lateral__dato--ambar { color: var(--verde-claro); }
+
+a.tras-cuenta__usuario {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+}
+
+a.tras-cuenta__usuario:hover { color: var(--tinta); text-decoration: underline; text-underline-offset: 4px; }
+
+.tras-cuenta__enlace { position: relative; }
+
+.tras-cuenta__numero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--rojo-ink);
+  color: var(--papel-3);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* ---------------------------------------------------------- avisos flotantes */
+
+/* window.showToast (trastienda.js): arriba a la derecha en escritorio y abajo
+   en el telefono, donde esta el pulgar. El de Deshacer dura 10 segundos. */
+.tras-toasts {
+  position: fixed;
+  z-index: 60;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.tras-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 8px 8px 16px;
+  border: var(--borde-medio) solid var(--tinta);
+  border-radius: var(--r-lg);
+  background: var(--tinta);
+  color: var(--papel-3);
+  font-size: 15px;
+  box-shadow: 0 12px 28px rgba(16, 19, 24, 0.22);
+  pointer-events: auto;
+  animation: tras-toast-entra 0.2s var(--ease);
+}
+
+.tras-toast--error { border-color: var(--rojo-ink); background: var(--rojo-ink); }
+
+.tras-toast__icono { flex: 0 0 auto; color: var(--verde-claro); }
+.tras-toast--error .tras-toast__icono { color: var(--papel-3); }
+
+.tras-toast__texto { flex: 1 1 auto; min-width: 0; }
+
+.tras-toast__accion,
+.tras-toast__cerrar {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 12px;
+  border: var(--borde) solid rgba(241, 242, 238, 0.4);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--papel-3);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tras-toast__cerrar { width: 40px; padding: 0; border-color: transparent; }
+.tras-toast__accion:hover,
+.tras-toast__cerrar:hover { background: rgba(241, 242, 238, 0.12); }
+
+@keyframes tras-toast-entra {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (min-width: 760px) {
+  .tras-toasts { top: 88px; bottom: auto; left: auto; width: 420px; }
+}
+
+/* ------------------------------------------------------------- Tom Select */
+
+/* Los <select> largos (contacto, trato) se vuelven buscables. La caja tiene
+   que ser la misma .tras-entrada de al lado: 44 de alto, filo fuerte, 16px.
+   Tom Select copia las clases del <select> a su envoltura, y sin la primera
+   regla la .tras-entrada pintaba una caja alrededor de la suya (lo encontro
+   la zona dinero). */
+.ts-wrapper.tras-entrada {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.ts-wrapper.single .ts-control,
+.ts-wrapper .ts-control {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: var(--borde) solid var(--linea-fuerte);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  box-shadow: none;
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 16px;
+}
+
+.ts-wrapper.focus .ts-control {
+  border-color: var(--tinta);
+  outline: 3px solid var(--verde-ink);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.ts-control input { font-size: inherit; font-family: inherit; }
+.ts-control input::placeholder { color: var(--tenue); }
+
+.ts-dropdown {
+  border: var(--borde-medio) solid var(--tinta);
+  border-radius: var(--r-md);
+  box-shadow: 0 12px 28px rgba(16, 19, 24, 0.14);
+  font-family: var(--sans);
+  font-size: 15px;
+}
+
+.ts-dropdown .option { padding: 10px 12px; }
+.ts-dropdown .option.active { background: var(--papel-2); color: var(--tinta); }
+.ts-dropdown .option.selected { background: var(--verde-bg); color: var(--verde-hondo); }
+
+/* ------------------------------------------------------- pantalla de entrada */
+
+/* Quien no ha entrado ve una sola hoja centrada (accounts/login.html). */
+.tras-entrada-pagina {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--aire-lg) 20px;
+}
+
+.tras-entrada-pagina > .tras-mensajes { width: 100%; max-width: 440px; }
+
+/* ------------------------------------------------------------------ vacio */
+
+.tras-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.tras-vacio__titulo { font-size: 16px; font-weight: 600; color: var(--tinta); }
+.tras-vacio__detalle { max-width: 520px; color: var(--tenue); }
+.tras-vacio .boton { margin-top: 8px; }
+
+/* ---------------------------------------------------- barra de listado */
+
+/* El buscador grande de una lista (Contactos.dc.html): filo de tinta y el
+   total a la derecha, en mono. */
+.tras-barra-lista { display: flex; flex-direction: column; gap: 12px; margin-bottom: var(--aire-md); }
+
+.tras-barra-lista__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.tras-barra-lista__buscar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 320px;
+  min-width: 0;
+  height: 56px;
+  padding: 0 18px;
+  border: var(--borde-medio) solid var(--tinta);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  color: var(--tenue);
+}
+
+.tras-barra-lista__buscar:focus-within { outline: 3px solid var(--verde-ink); outline-offset: 2px; }
+
+.tras-barra-lista__entrada {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 17px;
+}
+
+.tras-barra-lista__entrada:focus-visible { outline: none; }
+
+.tras-barra-lista__total {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.tras-barra-lista__orden { display: flex; align-items: center; gap: 10px; }
+.tras-barra-lista__orden .tras-entrada { min-width: 200px; }
+
+.tras-barra-lista__chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.tras-chip-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: var(--borde) solid var(--linea-fuerte);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  color: var(--tinta);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.tras-chip-filtro:hover { border-color: var(--tinta); }
+.tras-chip-filtro__etiqueta { color: var(--tenue); }
+
+.tras-barra-lista__limpiar { font-size: 14px; font-weight: 600; color: var(--verde-ink); }
+
+/* Los chips de filtro rapido (Todos 449, Leads 419): segmentos con cuenta,
+   el activo en tinta con el numero en verde claro (Contactos.dc.html).
+     <a class="tras-chip tras-chip--activo" href="?status=lead">Leads<span class="tras-chip__cuenta">419</span></a> */
+.tras-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.tras-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: var(--borde) solid var(--linea-fuerte);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  color: var(--tinta-2);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.tras-chip:hover { border-color: var(--tinta); color: var(--tinta); }
+
+.tras-chip__cuenta { font-family: var(--mono); font-size: 12px; color: var(--tenue); }
+
+.tras-chip--activo,
+.tras-chip--activo:hover {
+  border: var(--borde-medio) solid var(--tinta);
+  background: var(--tinta);
+  color: var(--papel-3);
+  font-weight: 600;
+}
+
+.tras-chip--activo .tras-chip__cuenta { color: var(--verde-claro); }
+
+/* El conmutador Tablero | Lista (Oportunidades.dc.html). */
+.tras-vista {
+  display: inline-flex;
+  border: var(--borde-medio) solid var(--tinta);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+.tras-vista__opcion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  background: var(--papel-3);
+  color: var(--tinta-2);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.tras-vista__opcion + .tras-vista__opcion { border-left: var(--borde) solid var(--linea); }
+.tras-vista__opcion:hover { background: var(--papel-2); color: var(--tinta); }
+
+.tras-vista__opcion[aria-current] {
+  background: var(--tinta);
+  color: var(--papel-3);
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------- mover a… */
+
+.tras-mover { margin-top: 10px; padding-top: 10px; border-top: var(--borde) solid var(--linea); }
+
+.tras-mover__control {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border: var(--borde) solid var(--linea-fuerte);
+  border-radius: var(--r-sm);
+  background: var(--papel-3);
+  color: var(--tinta-2);
+  font-family: var(--sans);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+@media (min-width: 760px) {
+  .tras-mover__control { font-size: 14px; }
+}
+
+/* --------------------------------------------------------------- modal */
+
+.tras-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+}
+
+.tras-modal__velo { position: absolute; inset: 0; background: rgba(16, 19, 24, 0.45); }
+
+.tras-modal__caja {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  padding: var(--aire-md);
+  border: var(--borde-fuerte) solid var(--tinta);
+  box-shadow: 0 20px 40px rgba(16, 19, 24, 0.25);
+}
+
+.tras-modal__cabeza { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; color: var(--rojo-ink); }
+.tras-modal__titulo { font-family: var(--sans); font-size: 19px; font-weight: 700; color: var(--tinta); }
+.tras-modal__texto { color: var(--tinta-2); }
+.tras-modal__pie { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: var(--aire-md); }
+
+@media (min-width: 600px) {
+  .tras-modal { align-items: center; }
+}
+
+/* ------------------------------------------------ barra de abajo (telefono) */
+
+/* Hoy, Contactos, Anotar, Tareas y Marcas a un pulgar (MovilInicio.dc.html).
+   El contenido deja su alto libre al final para que la barra no tape la
+   ultima fila, y los avisos flotantes suben por encima de ella. */
+.tras-abajo {
+  position: fixed;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 8px env(safe-area-inset-bottom, 0);
+  border-top: var(--borde-medio) solid var(--tinta);
+  background: var(--papel-3);
+}
+
+.pagina--trastienda .tras-principal { padding-bottom: 104px; }
+.tras-toasts { bottom: 88px; }
+
+.tras-abajo__enlace {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 62px;
+  border-top: 3px solid transparent;
+  color: var(--tenue);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.tras-abajo__enlace[aria-current] { border-top-color: var(--tinta); color: var(--tinta); font-weight: 600; }
+
+.tras-abajo__anotar { position: relative; flex: 0 0 auto; margin: -18px 6px 0; }
+
+.tras-abajo__mas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--verde-accion);
+  color: var(--sobre-verde);
+  list-style: none;
+  cursor: pointer;
+}
+
+.tras-abajo__mas::-webkit-details-marker { display: none; }
+.tras-abajo__anotar[open] .tras-abajo__mas { background: var(--tinta); }
+
+.tras-abajo__menu {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 230px;
+  padding: 6px;
+  border: var(--borde-fuerte) solid var(--tinta);
+  border-radius: var(--r-lg);
+  background: var(--papel-3);
+  box-shadow: 0 12px 28px rgba(16, 19, 24, 0.22);
+}
+
+.tras-abajo__menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  color: var(--tinta);
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.tras-abajo__menu a:hover { background: var(--papel-2); }
+
+@media (min-width: 1000px) {
+  .tras-abajo { display: none; }
+  .pagina--trastienda .tras-principal { padding-bottom: 64px; }
+}
+
+@media (min-width: 760px) and (max-width: 999px) {
+  .pagina--trastienda .tras-principal { padding-bottom: 104px; }
+}
+
+@media (min-width: 760px) {
+  .tras-toasts { bottom: auto; }
+}
+
+
+/* Un .campo puesto en fila junto a otro con pista o con Tom Select no se
+   estira a la altura del vecino (lo encontro la zona dinero). */
+.tras-campos .campo { align-content: start; }

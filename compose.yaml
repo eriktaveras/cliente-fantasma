@@ -1,0 +1,23 @@
+name: cliente-fantasma
+services:
+  app:
+    build:
+      context: .
+      args:
+        UID: ${UID:-1000}
+    image: cliente-fantasma:latest
+    container_name: cliente-fantasma
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # Directorio, no archivo: cada corrida es runs/<id>/ y el índice vive en runs/indice.sqlite.
+      - ./runs:/app/runs
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-8134}:8000"
+    healthcheck:
+      # 127.0.0.1 y no localhost: dentro del contenedor localhost puede resolver a ::1 y uvicorn solo escucha IPv4. La imagen slim no trae curl ni wget.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block titulo %}{{ t.vivo_titulo_pagina }} · {{ estado.negocio }}{% endblock %}
+{% block meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block pagina %}vivo{% endblock %}
+{% block contenido %}
+<div class="envoltura seccion" data-vivo data-eventos="/corrida/{{ run_id }}/eventos" data-estado-url="/corrida/{{ run_id }}/estado"
+     data-boleta="/corrida/{{ run_id }}/boleta" data-activa="{{ 'si' if activa else 'no' }}" data-estado="{{ estado.estado }}">
+  <header class="encabezado encabezado--fila">
+    <div>
+      <p class="rotulo rotulo--verde">{{ t.vivo_rotulo }}</p>
+      <h1 class="titular titular--s">{{ estado.negocio }}</h1>
+    </div>
+    <span class="pildora conexion" data-conexion><span class="pildora__punto"></span><span data-conexion-texto>{{ t.vivo_conectando }}</span></span>
+  </header>
+
+  <ol class="etapas" aria-label="{{ t.vivo_rotulo }}">
+    {% for e in t.etapas %}
+    <li class="etapas__paso {{ 'etapas__paso--hecho' if loop.first }}" data-etapa-paso="{{ loop.index0 }}"><span class="etapas__n">{{ "%02d" | format(loop.index) }}</span><span class="etapas__nombre">{{ e }}</span></li>
+    {% endfor %}
+  </ol>
+
+  <div class="tablero">
+    <p class="tablero__etapa" role="status" aria-live="polite" data-etapa-texto>{{ t.estados[estado.estado] }}</p>
+    <dl class="cifras cifras--vivo">
+      <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.costo }}</dt><dd class="cifras__valor" data-costo>US${{ "%.2f" | format(estado.costo_usd) }}</dd></div>
+      <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.conversaciones }}</dt><dd class="cifras__valor" data-n-conv>0</dd></div>
+      <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.evaluadas }}</dt><dd class="cifras__valor" data-n-eval>{{ estado.evaluadas or 0 }}</dd></div>
+      <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.pasan }}</dt><dd class="cifras__valor" data-n-pasan>0</dd></div>
+    </dl>
+  </div>
+
+  <div class="final" data-final {% if activa %}hidden{% endif %}>
+    {% if not activa %}
+    <div class="aviso {{ 'aviso--rojo' if estado.estado == 'error' else ('aviso--ambar' if estado.estado == 'presupuesto' else 'aviso--verde') }} aviso--fila">
+      <p class="aviso__texto">{{ t.vivo_ya_termino }}{% if estado.motivo %} <span class="dato">{{ estado.motivo }}</span>{% endif %}</p>
+      {% if estado.evaluadas %}<a class="boton boton--primario" href="/corrida/{{ run_id }}/boleta">{{ t.ver_boleta }}</a>{% else %}<a class="boton" href="/">{{ t.probar_otro }}</a>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="conversaciones" data-conversaciones>
+    <p class="vacio-vivo" data-vacio>{{ t.esperando_conversaciones if activa else t.vivo_ya_termino }}</p>
+  </div>
+
+  <details class="bitacora">
+    <summary class="rotulo">{{ t.bitacora }}</summary>
+    <ol class="bitacora__lista" data-bitacora></ol>
+  </details>
+</div>
+{% endblock %}

@@ -1,0 +1,24 @@
+# Copia a config.yaml. Las claves van por variable de entorno, no aquí.
+proveedores:
+  nebius:
+    base_url: https://api.tokenfactory.nebius.com/v1
+    api_key_env: NEBIUS_API_KEY
+    local: true          # Token Factory acepta chat_template_kwargs: razonamiento on/off por rol
+
+roles:
+  agente:      {proveedor: nebius, modelo: nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B, temperatura: 0.3, razonamiento: false, max_tokens: 600}
+  simulador:   {proveedor: nebius, modelo: nvidia/Nemotron-3-Ultra-550b-a55b,     temperatura: 0.8, razonamiento: false, max_tokens: 300}
+  juez:        {proveedor: nebius, modelo: nvidia/Nemotron-3-Ultra-550b-a55b,     temperatura: 0.0, razonamiento: false, max_tokens: 3000}
+  optimizador: {proveedor: nebius, modelo: nvidia/Nemotron-3-Ultra-550b-a55b,     temperatura: 0.7, razonamiento: true,  max_tokens: 16000}
+  generador:   {proveedor: nebius, modelo: nvidia/Nemotron-3-Ultra-550b-a55b,     temperatura: 0.7, razonamiento: true,  max_tokens: 12000}
+
+concurrency: 8
+repetitions_per_case: 1
+max_turns: 8
+timeout_s: 90
+reintentos: 4
+
+casos: {cantidad: 40, holdout: 0.3}
+presupuesto: {max_iterations: 3, max_hours: 1, plateau_patience: 2}
+metas: {target_train_score: 0.90, target_holdout_score: 0.85, critical_pass_rate: 1.0, umbral_paso_caso: 0.75}
+optimizacion: {min_improvement: 0.02, holdout_cada: 3, sobreajuste: 0.05, max_prompt_tokens: 2500, banco_corto: 20, muestra_fallos: 4}

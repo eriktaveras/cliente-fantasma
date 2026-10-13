@@ -1,0 +1,14 @@
+.env
+.env.*
+.git
+.venv
+.pytest_cache
+.ruff_cache
+**/__pycache__
+runs
+runs-init.log
+config.yaml
+tests
+docs
+deploy
+*.md

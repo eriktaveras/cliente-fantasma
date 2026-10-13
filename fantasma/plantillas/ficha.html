@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block titulo %}{{ t.ficha_titulo_pagina }} · {{ ficha.negocio }}{% endblock %}
+{% block meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block pagina %}ficha{% endblock %}
+
+{% macro fila_producto(p, n) %}
+<li class="pieza" data-fila>
+  <div class="pieza__rejilla">
+    <label class="campo campo--chico pieza__ancho">
+      <span class="campo__etiqueta">{{ t.producto_nombre }}</span>
+      <input class="campo__entrada campo__entrada--suave" name="producto_nombre" maxlength="200" value="{{ p.nombre if p else '' }}">
+    </label>
+    <label class="campo campo--chico">
+      <span class="campo__etiqueta">{{ t.producto_precio }}</span>
+      <input class="campo__entrada campo__entrada--suave campo__entrada--mono" name="producto_precio" inputmode="decimal" maxlength="20" value="{{ p.precio if p and p.precio is not none else '' }}">
+    </label>
+    <label class="campo campo--chico">
+      <span class="campo__etiqueta">{{ t.producto_moneda }}</span>
+      <select class="campo__entrada campo__entrada--suave" name="producto_moneda">
+        <option value="">{{ t.moneda_ficha }}</option>
+        {% for m in monedas %}<option value="{{ m }}" {% if p and p.moneda == m %}selected{% endif %}>{{ m }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="campo campo--chico">
+      <span class="campo__etiqueta">{{ t.producto_categoria }}</span>
+      <input class="campo__entrada campo__entrada--suave" name="producto_categoria" maxlength="80" value="{{ p.categoria if p else '' }}">
+    </label>
+    <label class="campo campo--chico">
+      <span class="campo__etiqueta">{{ t.producto_disponible }}</span>
+      <select class="campo__entrada campo__entrada--suave" name="producto_disponible">
+        <option value="si">{{ t.si }}</option>
+        <option value="no" {% if p and not p.disponible %}selected{% endif %}>{{ t.no }}</option>
+      </select>
+    </label>
+    <label class="campo campo--chico pieza__ancho">
+      <span class="campo__etiqueta">{{ t.producto_detalle }}</span>
+      <input class="campo__entrada campo__entrada--suave" name="producto_detalle" maxlength="300" value="{{ p.detalle if p else '' }}">
+    </label>
+  </div>
+  <button class="boton boton--fantasma boton--chico" type="button" data-quitar hidden>{{ t.quitar }}</button>
+</li>
+{% endmacro %}
+
+{% macro fila_faq(f) %}
+<li class="pieza" data-fila>
+  <div class="pieza__rejilla">
+    <label class="campo campo--chico pieza__ancho">
+      <span class="campo__etiqueta">{{ t.faq_pregunta }}</span>
+      <input class="campo__entrada campo__entrada--suave" name="faq_pregunta" maxlength="300" value="{{ f.pregunta if f else '' }}">
+    </label>
+    <label class="campo campo--chico pieza__ancho">
+      <span class="campo__etiqueta">{{ t.faq_respuesta }}</span>
+      <textarea class="campo__entrada campo__entrada--suave" name="faq_respuesta" rows="2" maxlength="1000">{{ f.respuesta if f else '' }}</textarea>
+    </label>
+  </div>
+  <button class="boton boton--fantasma boton--chico" type="button" data-quitar hidden>{{ t.quitar }}</button>
+</li>
+{% endmacro %}
+
+{% block contenido %}
+<form class="envoltura seccion" method="post" action="/corrida/{{ run_id }}/ficha" data-form-ficha>
+  <header class="encabezado">
+    <p class="rotulo rotulo--verde">{{ t.ficha_rotulo }}</p>
+    <h1 class="titular titular--s">{{ ficha.negocio }}</h1>
+    <p class="parrafo">{{ t.ficha_bajada }}</p>
+  </header>
+
+  {% if error %}<p class="mensaje" role="alert">{{ error }}</p>{% endif %}
+  {% if guardada %}<p class="aviso aviso--verde" role="status">{{ t.ficha_guardada }}</p>{% endif %}
+
+  <div class="ficha">
+    <div class="ficha__principal">
+      <section class="isla isla--suave" aria-labelledby="s-negocio">
+        <div class="isla__bloque">
+          <h2 class="subtitulo" id="s-negocio">{{ t.seccion_negocio }}</h2>
+          <div class="rejilla-campos">
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_negocio }}</span>
+              <input class="campo__entrada" name="negocio" maxlength="200" required value="{{ ficha.negocio }}"></label>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_rubro }}</span>
+              <input class="campo__entrada" name="rubro" maxlength="120" required value="{{ ficha.rubro }}"></label>
+            <label class="campo rejilla-campos__ancho"><span class="campo__etiqueta">{{ t.campo_descripcion }}</span>
+              <textarea class="campo__entrada" name="descripcion" rows="3" maxlength="2000">{{ ficha.descripcion }}</textarea></label>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_pais }}</span>
+              <input class="campo__entrada campo__entrada--suave" name="pais" maxlength="80" value="{{ ficha.pais }}"></label>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_moneda }}</span>
+              <select class="campo__entrada" name="moneda">
+                {% for m in monedas %}<option value="{{ m }}" {% if ficha.moneda == m %}selected{% endif %}>{{ m }}</option>{% endfor %}
+              </select></label>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_horario }}</span>
+              <input class="campo__entrada campo__entrada--suave" name="horario" maxlength="300" value="{{ ficha.horario }}"></label>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_tono }}</span>
+              <input class="campo__entrada campo__entrada--suave" name="tono" maxlength="200" value="{{ ficha.tono }}"></label>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_zonas }}</span>
+              <textarea class="campo__entrada campo__entrada--suave" name="zonas_entrega" rows="3" maxlength="3000" aria-describedby="pista-linea">{{ ficha.zonas_entrega | join("\n") }}</textarea></label>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_pagos }}</span>
+              <textarea class="campo__entrada campo__entrada--suave" name="formas_pago" rows="3" maxlength="3000" aria-describedby="pista-linea">{{ ficha.formas_pago | join("\n") }}</textarea></label>
+          </div>
+          <p class="campo__pista" id="pista-linea">{{ t.uno_por_linea }}</p>
+        </div>
+        <div class="isla__bloque">
+          <h2 class="subtitulo">{{ t.seccion_politicas }}</h2>
+          <div class="rejilla-campos">
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_delivery }}</span>
+              <textarea class="campo__entrada campo__entrada--suave" name="delivery" rows="2" maxlength="1000">{{ ficha.politicas.delivery }}</textarea></label>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_devoluciones }}</span>
+              <textarea class="campo__entrada campo__entrada--suave" name="devoluciones" rows="2" maxlength="1000">{{ ficha.politicas.devoluciones }}</textarea></label>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_garantia }}</span>
+              <textarea class="campo__entrada campo__entrada--suave" name="garantia" rows="2" maxlength="1000">{{ ficha.politicas.garantia }}</textarea></label>
+          </div>
+        </div>
+      </section>
+
+      <section class="isla isla--suave" aria-labelledby="s-productos">
+        <div class="isla__bloque">
+          <h2 class="subtitulo" id="s-productos">{{ t.seccion_productos }} <span class="dato">· {{ ficha.productos | length }}</span></h2>
+          <p class="campo__pista">{{ t.productos_pista }}</p>
+          <ol class="piezas" data-lista="producto">
+            {% for p in ficha.productos %}{{ fila_producto(p, loop.index) }}{% endfor %}
+            {{ fila_producto(none, 0) }}
+          </ol>
+          <template data-plantilla="producto">{{ fila_producto(none, 0) }}</template>
+          <button class="boton boton--fantasma" type="button" data-agregar="producto" hidden>{{ t.agregar_producto }}</button>
+        </div>
+      </section>
+
+      <section class="isla isla--suave" aria-labelledby="s-faq">
+        <div class="isla__bloque">
+          <h2 class="subtitulo" id="s-faq">{{ t.seccion_faq }}</h2>
+          <ol class="piezas" data-lista="faq">
+            {% for f in ficha.preguntas_frecuentes %}{{ fila_faq(f) }}{% endfor %}
+            {{ fila_faq(none) }}
+          </ol>
+          <template data-plantilla="faq">{{ fila_faq(none) }}</template>
+          <button class="boton boton--fantasma" type="button" data-agregar="faq" hidden>{{ t.agregar_faq }}</button>
+        </div>
+      </section>
+    </div>
+
+    <aside class="ficha__lado">
+      <section class="isla {{ 'isla--pendiente' if ficha.faltantes else 'isla--suave' }}" aria-labelledby="s-faltan">
+        <div class="isla__bloque">
+          <h2 class="rotulo {{ 'rotulo--ambar' if ficha.faltantes else '' }}" id="s-faltan">{{ t.faltantes_rotulo }} · {{ ficha.faltantes | length }}</h2>
+          {% if not ficha.faltantes %}<p class="parrafo">{{ t.sin_faltantes }}</p>{% endif %}
+          <label class="campo">
+            <span class="oculto-visual">{{ t.faltantes_rotulo }}</span>
+            <textarea class="campo__entrada campo__entrada--suave" name="faltantes" rows="{{ [ficha.faltantes | length + 1, 3] | max }}" maxlength="5000" aria-describedby="pista-faltan">{{ ficha.faltantes | join("\n") }}</textarea>
+            <span class="campo__pista" id="pista-faltan">{{ t.faltantes_pista }}</span>
+          </label>
+          {% if ficha.fuentes %}
+          <p class="rotulo rotulo--chico espaciado-arriba">{{ t.fuentes_rotulo }}</p>
+          <ul class="fuentes">{% for f in ficha.fuentes %}<li class="dato">{{ f }}</li>{% endfor %}</ul>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="isla lanzar" aria-labelledby="s-lanzar">
+        <div class="isla__bloque">
+          <h2 class="subtitulo" id="s-lanzar">{{ t.seccion_lanzar }}</h2>
+          <fieldset class="opciones">
+            <legend class="campo__etiqueta">{{ t.form_modo }}</legend>
+            <label class="opcion"><input class="opcion__control" type="radio" name="modo" value="generado" {% if pendiente.modo != "remoto" %}checked{% endif %} data-modo>
+              <span class="opcion__texto"><strong>{{ t.modo_generado }}</strong></span></label>
+            <label class="opcion"><input class="opcion__control" type="radio" name="modo" value="remoto" {% if pendiente.modo == "remoto" %}checked{% endif %} data-modo>
+              <span class="opcion__texto"><strong>{{ t.modo_remoto }}</strong></span></label>
+          </fieldset>
+          <div class="remoto" data-remoto>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_url_bot }}</span>
+              <input class="campo__entrada" name="url_bot" type="url" inputmode="url" maxlength="500" placeholder="https://" value="{{ pendiente.url_bot }}"></label>
+            <label class="campo"><span class="campo__etiqueta">{{ t.campo_encabezados }}</span>
+              <textarea class="campo__entrada campo__entrada--suave campo__entrada--mono" name="encabezados" rows="2" maxlength="5500">{{ encabezados_txt }}</textarea></label>
+          </div>
+          <fieldset class="opciones">
+            <legend class="campo__etiqueta">{{ t.campo_tamano }}</legend>
+            {% for clave, m in tamaños.items() %}
+            <label class="opcion"><input class="opcion__control" type="radio" name="tamano" value="{{ clave }}" {% if loop.first %}checked{% endif %}>
+              <span class="opcion__texto"><strong>{{ t["tamano_" ~ clave] }}</strong>
+                <span class="opcion__pista">{{ t.tamano_detalle.format(casos=m.casos, iteraciones=m.iteraciones, tope="%.2f" | format(m.tope_usd)) }}</span></span></label>
+            {% endfor %}
+          </fieldset>
+        </div>
+        <div class="isla__bloque lanzar__acciones">
+          <button class="boton boton--primario boton--bloque" type="submit" name="accion" value="lanzar" data-enviar>{{ t.boton_lanzar }}</button>
+          <button class="boton boton--fantasma boton--bloque" type="submit" name="accion" value="guardar">{{ t.boton_guardar }}</button>
+          <p class="espera" role="status" data-espera></p>
+        </div>
+      </section>
+    </aside>
+  </div>
+</form>
+{% endblock %}

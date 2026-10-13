@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block titulo %}{{ t.boleta_titulo_pagina }}{% if boleta %} · {{ boleta.negocio }}{% endif %}{% endblock %}
+{% block meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block pagina %}boleta{% endblock %}
+
+{% macro tono(nota) %}{{ 'verde' if nota >= 85 else ('ambar' if nota >= 60 else 'rojo') }}{% endmacro %}
+
+{% macro barra(nota) %}
+<span class="avance avance--fina barra"><span class="avance__relleno barra__relleno barra__relleno--{{ tono(nota) }}" style="width: {{ nota }}%"></span></span>
+{% endmacro %}
+
+{% block contenido %}
+{% if not boleta %}
+<div class="envoltura seccion">
+  <p class="rotulo rotulo--verde">{{ t.boleta_rotulo }}</p>
+  <h1 class="titular titular--s">{{ estado.negocio }}</h1>
+  <p class="aviso aviso--ambar espaciado-arriba" role="status">{{ t.boleta_pendiente }}</p>
+  <p class="espaciado-arriba"><a class="boton" href="/corrida/{{ run_id }}/vivo">{{ t.vivo_titulo_pagina }}</a></p>
+</div>
+{% else %}
+{% set ver = boleta.veredicto %}
+{% set mejoro = boleta.mejor.version != boleta.inicial.version %}
+<section class="hero hero--boleta">
+  <div class="envoltura boleta__cabeza">
+    <div>
+      <p class="rotulo rotulo--verde">{{ t.boleta_publica_rotulo if publica else t.boleta_rotulo }}</p>
+      <h1 class="titular titular--s">{{ boleta.negocio }}</h1>
+      <p class="veredicto veredicto--{{ ver }}"><span class="veredicto__punto" aria-hidden="true"></span>{{ t["veredicto_" ~ ver] }}</p>
+      {% if boleta.estado == "presupuesto" %}<p class="aviso aviso--ambar espaciado-arriba">{{ t.estado_presupuesto }}</p>{% endif %}
+      {% if boleta.estado == "error" %}<p class="aviso aviso--rojo espaciado-arriba">{{ t.estado_error }}</p>{% endif %}
+      {% if boleta.modo == "remoto" %}<p class="parrafo espaciado-arriba">{{ t.modo_remoto_aviso }}</p>{% endif %}
+    </div>
+    <div class="isla nota">
+      <div class="isla__bloque nota__bloque">
+        <p class="rotulo">{{ t.nota }}</p>
+        <p class="nota__cifra nota__cifra--{{ tono(boleta.mejor.nota) }}">{{ boleta.mejor.nota }}<span class="nota__de">/100</span></p>
+        {% if mejoro %}
+        <p class="nota__antes"><span class="dato">{{ t.antes }}</span> <strong>{{ boleta.inicial.nota }}</strong> <span aria-hidden="true">→</span> <span class="dato">{{ t.despues }}</span> <strong>{{ boleta.mejor.nota }}</strong></p>
+        {% endif %}
+      </div>
+      <dl class="cifras cifras--pegadas">
+        <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.casos }}</dt><dd class="cifras__valor">{{ boleta.mejor.casos }}</dd></div>
+        <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.pasan }}</dt><dd class="cifras__valor">{{ boleta.mejor.pasan }}</dd></div>
+        <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.con_critica }}</dt><dd class="cifras__valor">{{ boleta.mejor.criticas }}</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<section class="envoltura seccion" aria-labelledby="h-fallas">
+  <p class="rotulo rotulo--verde">{{ t.fallas_rotulo }}</p>
+  <h2 class="titular-seccion" id="h-fallas">{{ t.fallas_titulo }}</h2>
+  {% if not boleta.fallas %}<p class="aviso aviso--verde">{{ t.sin_fallas }}</p>{% endif %}
+  <ol class="fallas">
+    {% for f in boleta.fallas %}
+    <li class="isla falla">
+      <div class="isla__bloque">
+        <div class="falla__cabeza">
+          <span class="falla__n">{{ loop.index }}</span>
+          <div>
+            <h3 class="falla__que">{{ f.que_fallo }}</h3>
+            <p class="dato">{{ f.persona }} · {{ f.nota }}/100{% if f.critica %} · <span class="texto-rojo">{{ t.critica }}</span>{% endif %}</p>
+          </div>
+        </div>
+        <ul class="ejes">
+          {% for eje, valor in f.ejes.items() %}{% if not (eje == "ataque" and valor == "ninguno") %}
+          <li class="pildora pildora--chica {{ 'pildora--rojo' if eje == 'ataque' else '' }}">{{ t.valores.get(valor, valor) }}</li>
+          {% endif %}{% endfor %}
+        </ul>
+        {% if f.cita %}<blockquote class="cita"><p class="rotulo rotulo--chico texto-rojo">{{ t.aqui_fallo }}</p><p class="cita__texto">{{ f.cita }}</p></blockquote>{% endif %}
+        <p class="falla__motivo"><span class="rotulo rotulo--chico">{{ t.por_que }}</span> {{ f.motivo }}</p>
+      </div>
+      <details class="isla__bloque falla__conv" {% if loop.first %}open{% endif %}>
+        <summary class="enlace-texto">{{ t.ver_conversacion }}</summary>
+        <ol class="chat" data-chat>
+          {% for m in f.conversacion %}
+          <li class="burbuja burbuja--{{ m.rol }} {{ 'burbuja--falla' if loop.index0 == f.turno }}" {% if loop.index0 == f.turno %}data-falla{% endif %}>
+            <span class="oculto-visual">{{ t.cliente if m.rol == "cliente" else t.bot }}:</span>
+            {% if loop.index0 == f.turno %}<span class="burbuja__marca">{{ t.aqui_fallo }}</span><mark class="burbuja__texto">{{ m.texto }}</mark>{% else %}<span class="burbuja__texto">{{ m.texto }}</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ol>
+      </details>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
+<section class="envoltura seccion" aria-labelledby="h-criterios">
+  <p class="rotulo rotulo--verde">{{ t.criterios_rotulo }}</p>
+  <h2 class="titular-seccion" id="h-criterios">{{ t.criterios_titulo }}</h2>
+  <div class="isla isla--suave">
+    <div class="isla__bloque">
+      <div class="fila fila--cabeza criterio">
+        <span class="fila__nombre rotulo">{{ t.nota }}</span>
+        <span class="criterio__cifras rotulo"><span>{{ t.antes }}</span>{% if mejoro %}<span>{{ t.despues }}</span>{% endif %}</span>
+      </div>
+      {% for c in boleta.criterios %}
+      <div class="fila criterio">
+        <span class="fila__nombre">{{ c.nombre }}{% if c.critico %} <span class="pildora pildora--chica pildora--rojo">{{ t.critico }}</span>{% endif %}
+          {% if c.antes is not none %}{{ barra(c.despues if mejoro and c.despues is not none else c.antes) }}{% endif %}</span>
+        <span class="criterio__cifras fila__dato">
+          <span>{{ c.antes if c.antes is not none else "·" }}</span>
+          {% if mejoro %}<span class="criterio__despues">{{ c.despues if c.despues is not none else "·" }}</span>{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if boleta.por_eje %}
+<section class="envoltura seccion" aria-labelledby="h-ejes">
+  <p class="rotulo rotulo--verde">{{ t.ejes_rotulo }}</p>
+  <h2 class="titular-seccion" id="h-ejes">{{ t.ejes_titulo }}</h2>
+  <div class="rejilla rejilla--2 rejilla--apretada">
+    {% for eje in ("dialecto", "intencion", "ataque", "estilo") if eje in boleta.por_eje %}
+    <div class="isla isla--suave">
+      <div class="isla__bloque">
+        <h3 class="subtitulo">{{ t.ejes[eje] }}</h3>
+        {% for valor, nota in boleta.por_eje[eje].items() %}
+        <div class="fila eje"><span class="fila__nombre">{{ t.valores.get(valor, valor) }}{{ barra(nota) }}</span><span class="fila__dato">{{ nota }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="envoltura seccion" aria-labelledby="h-parche">
+  <p class="rotulo rotulo--verde">{{ t.parche_rotulo }}</p>
+  {% set p = boleta.parche %}
+  {% if p.tipo == "ninguno" %}
+  <h2 class="titular-seccion" id="h-parche">{{ t.parche_titulo_sugerencia }}</h2>
+  <p class="aviso">{{ t.parche_ninguno }}</p>
+  {% else %}
+  <h2 class="titular-seccion" id="h-parche">{{ t.parche_titulo_final if p.tipo == "prompt_final" else t.parche_titulo_sugerencia }}</h2>
+  <div class="isla">
+    <div class="isla__bloque">
+      <p class="aviso {{ 'aviso--verde' if p.tipo == 'prompt_final' else 'aviso--ambar' }}">{{ t.parche_final_pista if p.tipo == "prompt_final" else t.parche_sugerencia_pista }}</p>
+      {% if p.motivo %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.parche_rechazo }}</span> {{ p.motivo }}</p>{% endif %}
+      {% if p.cambio %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.cambio }}</span> {{ p.cambio }}</p>{% endif %}
+      {% if p.hipotesis %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.hipotesis }}</span> {{ p.hipotesis }}</p>{% endif %}
+    </div>
+    <div class="isla__bloque">
+      <div class="copiable">
+        <label class="campo">
+          <span class="campo__etiqueta">{{ t.parche_titulo_final if p.tipo == "prompt_final" else t.parche_titulo_sugerencia }}</span>
+          <textarea class="campo__entrada campo__entrada--mono prompt" id="prompt" rows="14" readonly>{{ p.texto }}</textarea>
+        </label>
+        <button class="boton boton--suave" type="button" data-copiar="#prompt">{{ t.copiar }}</button>
+      </div>
+      {% if p.diff %}
+      <details class="espaciado-arriba">
+        <summary class="enlace-texto">{{ t.ver_diff }}</summary>
+        <pre class="diff">{% for linea in p.diff.splitlines() %}<span class="diff__linea {{ 'diff__linea--mas' if linea.startswith('+') and not linea.startswith('+++') else ('diff__linea--menos' if linea.startswith('-') and not linea.startswith('---') else '') }}">{{ linea }}</span>
+{% endfor %}</pre>
+      </details>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<section class="envoltura seccion" aria-labelledby="h-datos">
+  <p class="rotulo rotulo--verde" id="h-datos">{{ t.datos_rotulo }}</p>
+  <div class="rejilla rejilla--2 rejilla--apretada espaciado-arriba">
+    <div class="isla isla--suave">
+      <div class="isla__bloque">
+        <h3 class="subtitulo">{{ t.modelos }}</h3>
+        {% for rol, modelo in boleta.modelos.items() %}
+        <div class="fila"><span class="fila__nombre">{{ t.roles.get(rol, rol) }}</span><span class="fila__dato modelo">{{ modelo }}</span></div>
+        {% endfor %}
+        <div class="fila fila--sin-linea"><span class="fila__nombre">{{ t.costo }}</span><span class="fila__dato">US${{ "%.2f" | format(boleta.costo_usd) }}</span></div>
+      </div>
+    </div>
+    {% if publica %}
+    <div class="isla isla--suave">
+      <div class="isla__bloque">
+        <p class="parrafo">{{ t.inicio_bajada }}</p>
+        <p class="espaciado-arriba"><a class="boton boton--primario" href="/">{{ t.cta_publica }}</a></p>
+      </div>
+    </div>
+    {% else %}
+    <div class="isla isla--suave">
+      <div class="isla__bloque">
+        <div class="copiable">
+          <label class="campo">
+            <span class="campo__etiqueta">{{ t.enlace_publico }}</span>
+            <input class="campo__entrada campo__entrada--mono" id="enlace" value="{{ enlace }}" readonly aria-describedby="pista-enlace">
+            <span class="campo__pista" id="pista-enlace">{{ t.enlace_publico_pista }}</span>
+          </label>
+          <button class="boton boton--suave" type="button" data-copiar="#enlace">{{ t.copiar }}</button>
+        </div>
+        <p class="espaciado-arriba"><a class="enlace-accion" href="/corrida/{{ run_id }}/conversaciones.jsonl" download>{{ t.descargar_jsonl }}</a></p>
+        <p><a class="enlace-accion" href="/">{{ t.probar_otro }}</a></p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

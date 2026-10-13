@@ -1,0 +1,936 @@
+/* ===========================================================================
+   Sistema TALLER: la copia de referencia (tokens y piezas base)
+
+   Vive en ~/selfhosted/brand/taller/. Es el punto de partida para cualquier
+   pieza nueva de Erik: se COPIA al proyecto (no se enlaza) y se le suma la
+   hoja propia. Lo explica LEEME.md de esta carpeta.
+
+   Nacio en cursos.eriktaveras.com (static/css/estilo.css) y se usa igual en
+   el CRM (static/css/taller.css), eriktaveras.com (cv.css),
+   taverassolutions.com (sitio.css) y link.eriktaveras.com.
+
+   Cinco reglas sostienen todo lo que hay debajo:
+
+     1. Titula una display condensada, lee una grotesca y mide una mono. Tres
+        voces y ninguna mas.
+     2. El papel es gris frio casi blanco, no crema. El crema era de libro; un
+        taller trabaja sobre una mesa limpia.
+     3. El verde es SENAL de accion. #047857 para todo lo que es texto o lleva
+        texto encima; #10b981 solo para marcas graficas sin texto.
+     4. Los radios son chicos y dicen que es cada cosa: 4px en una etiqueta,
+        6px en lo que se pulsa, 8px en lo que agrupa. Redondo, solo el numero
+        de una pieza.
+     5. La jerarquia la hacen la escala y el peso, no el gris.
+
+   Y una regla de escritura, que ya costo tres bugs en el molde:
+
+     TODO MODIFICADOR QUE COMPITA CON UNA BASE REDECLARADA DENTRO DE UNA MEDIA
+     QUERY SE ESCRIBE CON DOBLE CLASE (.tarjeta.tarjeta--grande).
+
+   Este fichero ordena por componente y agrupa las media queries al final de
+   cada uno, no al final del archivo: el molde las junto todas abajo y por eso
+   piso modificadores sin que nadie lo viera.
+ =========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* El papel. La hoja, la banda y la isla, mas un cuarto nivel para la franja
+     de abajo de una isla y el fondo de un esquema: en blanco puro se
+     confundian con la isla y en el papel de la hoja se leian como un hueco. */
+  --papel: #F1F2EE;
+  --papel-2: #E6E8E2;
+  --papel-3: #FFFFFF;
+  --papel-4: #F7F8F5;
+
+  --tinta: #101318;
+  --tinta-2: #353B44;
+  --suave: #4A515B;
+  /* #5C636D da 5.5:1 sobre el papel, 5.0:1 sobre papel-2 y 5.4:1 sobre el
+     verde-bg de un hover. Los rotulos bajan a 11px, asi que tiene que pasar AA
+     de texto normal en los cuatro fondos donde cae. */
+  --tenue: #5C636D;
+
+  --linea: #D4D8D1;
+  --linea-suave: #E1E4DE;
+  /* El filo de las etiquetas y de lo pendiente. Una etiqueta de 11px con el
+     filo de una caja grande no se ve: necesita un punto mas de contraste. */
+  --linea-fuerte: #9CA39B;
+
+  /* El verde de marca, partido en tres como en el resto de la casa.
+     #047857 es FUNCIONAL: texto, boton, check. Con blanco encima da 5.48:1 y
+     como texto sobre el papel 4.85:1. #10b981 es DECORATIVO: la marca, un
+     subrayado, la barra de una leccion vista. Con blanco encima da 2.54:1,
+     asi que nunca es texto ni fondo bajo texto. El claro es el acento sobre
+     la tinta, donde da 9.7:1. */
+  --verde: #10b981;
+  --verde-ink: #047857;
+  --verde-hondo: #064E3B;
+  --verde-claro: #34D399;
+  --verde-papel: #B5DCC6;
+  --verde-bg: #E2F4EB;
+  --verde-linea: #B5DCC6;
+
+  /* El boton que cobra y lo que va encima. Van APARTE de --verde-ink porque
+     .banda--hondo da vuelta --verde-ink al verde claro, y un boton primario
+     dentro de la banda se quedaria con blanco sobre #34D399 (1.9:1). Estos
+     dos no se dan vuelta nunca. */
+  --verde-accion: #047857;
+  --sobre-verde: #FFFFFF;
+
+  --ambar-ink: #5C4413;
+  --ambar-bg: #F7E6B8;
+  --ambar-linea: #D9BC6A;
+
+  --rojo-ink: #8E2A17;
+  --rojo-bg: #F8D9D2;
+  --rojo-linea: #D89B8C;
+
+  /* Tres voces y ninguna mas.
+
+     Big Shoulders Display titula: condensada y pesada, la letra del rotulo de
+     un taller. A 112px cabe "WhatsApp con IA" en media pantalla y a 32px se
+     sigue leyendo. Hanken Grotesk lee el cuerpo. IBM Plex Mono rotula,
+     numera y pone las duraciones en columna.
+
+     Arial Narrow cierra la pila de la display porque viene instalada en
+     Windows y macOS y es lo mas parecido en ancho: si la fuente no llega, el
+     titular no salta a tres renglones. */
+  --display: 'Big Shoulders Display', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --sans: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* El sistema anterior titulaba con --serif y quedan paginas con estilo
+     propio que lo nombran (el certificado, verificar). Apunta a la display
+     para que ninguna se quede con un titular en Times. */
+  --serif: var(--display);
+
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 8px;
+
+  --borde: 1px;
+  --borde-medio: 1.5px;
+  --borde-fuerte: 2px;
+
+  /* El area minima que un dedo acierta sin apuntar. */
+  --tap: 48px;
+
+  /* El aire, en escalones. Fuera de esta escala no se separa nada. */
+  --aire-xs: 8px;
+  --aire-sm: 16px;
+  --aire-md: 24px;
+  --aire-lg: 40px;
+  --aire-xl: 64px;
+  --aire-xxl: 96px;
+
+  /* 1232 con 40px de margen deja 1152 de contenido, que es la medida del
+     esquema aprobado. */
+  --ancho: 1280px;
+  --prosa: 660px;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* El plano: la cuadricula de 32px de una hoja de taller. Va en el hero, en
+     la portada de relleno de una tarjeta y en la banda oscura, y en ningun
+     sitio mas: por toda la pagina seria papel milimetrado, no un plano. */
+  --plano:
+    linear-gradient(rgba(16, 19, 24, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 19, 24, 0.055) 1px, transparent 1px);
+}
+
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  /* El pie se queda pegado al fondo aunque la pagina sea corta. Sin esto,
+     /entrar/ y cualquier pagina de poco alto dejan una franja de papel POR
+     DEBAJO del pie, que se lee como si el sitio se hubiera cortado. */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /* Un titulo sin espacios o un correo largo no pueden empujar la pagina a lo
+     ancho: en el telefono eso rompe el scroll entero. */
+  overflow-wrap: break-word;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Ni una negrita falsa: base.html pide los pesos de verdad, y un titular en
+     Arial Narrow engordado por el navegador se ve sucio justo donde manda. */
+  font-synthesis: style;
+}
+
+img, svg, video, iframe { max-width: 100%; }
+img { height: auto; }
+
+a { color: inherit; }
+
+/* Los titulares grandes van en la display. Los h3 y h4 son titulos de
+   renglon (un modulo, un bloque del panel) y a 17-20px una condensada de 800
+   se lee como un grito: ahi titula la grotesca. */
+h1, h2 {
+  font-family: var(--display);
+  font-weight: 800;
+  line-height: 0.94;
+  letter-spacing: -0.005em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+h3, h4 {
+  font-family: var(--sans);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+  margin: 0;
+  text-wrap: balance;
+}
+
+p { margin: 0; text-wrap: pretty; }
+ul, ol { margin: 0; padding: 0; }
+
+:focus-visible {
+  outline: 3px solid var(--verde-ink);
+  outline-offset: 2px;
+}
+
+/* Un salto al contenido para quien navega con teclado. Solo se ve al enfocar. */
+.saltar {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 12px 16px;
+  background: var(--tinta);
+  color: var(--papel);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.saltar:focus { left: 0; }
+
+.oculto-visual {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- layout - */
+
+/* LOS CINCO CORTES DEL SISTEMA, y ninguno mas.
+
+     (base)   telefono. Todo en una columna. La referencia son 390px, que es lo
+              que trae quien llega del reel de Instagram.
+     600px    caben dos tarjetas chicas de frente, el cupon con su boton al
+              lado y el esquema de montaje en fila.
+     760px    tablet. El pie se pone en fila, el catalogo abre a dos columnas y
+              el margen lateral sube a 32px.
+     1000px   escritorio. Rejilla de 12, hero a dos columnas, la isla del
+              pedido se queda pegada al desplazar y la barra de compra se
+              retira, porque desde aqui el precio ya se ve sin bajar.
+     1240px   pantalla ancha. Solo crece el margen lateral, a 40px. */
+
+.envoltura {
+  width: 100%;
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* El panel y el aula piden mas ancho: son listas y tablas, no prosa. */
+.envoltura--ancha { max-width: 1280px; }
+
+@media (min-width: 760px) {
+  .envoltura { padding: 0 32px; }
+}
+
+@media (min-width: 1240px) {
+  .envoltura { padding: 0 40px; }
+}
+
+.prosa {
+  max-width: var(--prosa);
+}
+
+/* La rejilla del sistema. En el telefono TODA rejilla es una sola columna: los
+   modificadores solo abren columnas hacia arriba, nunca las cierran. */
+.rejilla {
+  display: grid;
+  gap: var(--aire-lg);
+}
+
+.rejilla--apretada { gap: var(--aire-md); }
+
+/* Sin hueco: las celdas se tocan y la separacion la hacen sus filos. */
+.rejilla--pegada { gap: 0; }
+
+@media (min-width: 600px) {
+  .rejilla--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rejilla--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 760px) {
+  .rejilla--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1000px) {
+  .rejilla--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+  /* La rejilla de 12 solo existe en escritorio: el texto pide 7 columnas y la
+     isla de compra 5, y en el temario son 4 de rotulo contra 8 de lista. Las
+     clases .col-* no hacen nada por debajo de 1000px, y eso es a proposito. */
+  .rejilla--12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+
+  .col-4 { grid-column: span 4; }
+  .col-5 { grid-column: span 5; }
+  .col-6 { grid-column: span 6; }
+  .col-7 { grid-column: span 7; }
+  .col-8 { grid-column: span 8; }
+}
+
+/* ------------------------------------------------------------ tipografia - */
+
+.rotulo {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+
+.rotulo--verde { color: var(--verde-ink); }
+
+/* Dentro de una isla el rotulo baja un escalon: tiene menos aire alrededor y
+   al mismo tamano compite con el dato que rotula. */
+.rotulo--chico { font-size: 11px; letter-spacing: 0.1em; }
+
+/* La display es estrecha: a igual cuerpo ocupa dos tercios de lo que ocupaba
+   el serif, asi que los escalones suben para llenar la misma medida. */
+.titular {
+  font-size: clamp(46px, 11vw, 88px);
+}
+
+/* El escalon lo decide el largo del texto, que es lo que el clamp no puede
+   saber. Lo calcula el filtro escala_titular. */
+.titular--xl { font-size: clamp(56px, 14vw, 112px); }
+.titular--l  { font-size: clamp(50px, 12vw, 104px); }
+.titular--m  { font-size: clamp(44px, 10vw, 84px); }
+.titular--s  { font-size: clamp(38px, 8.5vw, 68px); }
+
+.titular-seccion {
+  font-size: clamp(40px, 7vw, 72px);
+  margin-bottom: var(--aire-md);
+}
+
+.bajada {
+  font-size: clamp(18px, 2.4vw, 22px);
+  line-height: 1.45;
+  color: var(--tinta-2);
+  max-width: 48ch;
+}
+
+/* La bajada de la landing: la frase que remata el titulo. Conserva el nombre
+   de cuando iba en serif; ahora va en la grotesca y en 600, que a este cuerpo
+   se lee de un golpe al lado de un titular condensado. */
+.bajada--serif {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: clamp(20px, 3vw, 24px);
+  line-height: 1.35;
+  color: var(--tinta);
+  max-width: 34ch;
+}
+
+.parrafo {
+  color: var(--tinta-2);
+  max-width: 62ch;
+}
+
+.parrafo + .parrafo { margin-top: var(--aire-sm); }
+
+.dato {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--tenue);
+}
+
+/* --------------------------------------------------------------- botones - */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: var(--tap);
+  padding: 12px 24px;
+  border: var(--borde-medio) solid var(--tinta);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+/* Un boton de taller no salta al pasar el raton: se oscurece un punto. El
+   translate del sistema anterior movia el boton justo cuando el pulgar ya iba
+   hacia el. */
+.boton:hover { background-color: rgba(16, 19, 24, 0.05); }
+
+/* El boton que cobra: verde de accion a sangre con blanco encima (5.48:1). Es
+   lo unico de la pagina que lleva el verde relleno. Si algo mas se pinta de
+   verde, este deja de ser el destino. */
+.boton--primario {
+  min-height: 56px;
+  padding: 14px 28px;
+  background: var(--verde-accion);
+  border-color: var(--verde-accion);
+  color: var(--sobre-verde);
+  font-size: 17px;
+}
+
+.boton--primario:hover {
+  background: var(--verde-hondo);
+  border-color: var(--verde-hondo);
+}
+
+.boton--fantasma {
+  border-color: var(--linea-fuerte);
+  color: var(--tinta-2);
+  font-weight: 500;
+}
+
+.boton--fantasma:hover { border-color: var(--tinta); color: var(--tinta); background-color: transparent; }
+
+.boton--bloque { display: flex; width: 100%; }
+
+/* El acento suave: acepta sin cobrar. Aplicar un cupon, seguir viendo. Verde
+   de accion sobre el verde suave (4.8:1). No compite con .boton--primario
+   porque no lleva el verde relleno. */
+.boton--suave {
+  background: var(--verde-bg);
+  border-color: var(--verde-linea);
+  color: var(--verde-ink);
+}
+
+.boton--suave:hover { border-color: var(--verde-ink); background-color: var(--verde-bg); }
+
+/* El enlace que cierra una tarjeta o una caja: verde de accion con su flecha.
+   Cuando es un <a> de verdad se pulsa igual y por eso lleva el area de toque. */
+.enlace-accion {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--verde-ink);
+  text-decoration: none;
+}
+
+a.enlace-accion { min-height: var(--tap); }
+.enlace-accion:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+/* El enlace en mono con su raya verde debajo. La raya la dibuja
+   text-decoration y no un border-bottom: asi la caja puede crecer hasta los
+   48px de la casa sin que la linea se despegue de las letras, y sigue al texto
+   cuando parte en dos renglones. La raya es #10b981 porque es una marca, no
+   texto. */
+.enlace-mono {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-decoration-color: var(--verde);
+  text-decoration-thickness: var(--borde-fuerte);
+  text-underline-offset: 4px;
+}
+
+.enlace-mono:hover { text-decoration-color: var(--tinta); }
+
+/* La marca de Erik: los corchetes verdes con la T en tinta, la misma de
+   ~/selfhosted/brand. Va como fondo del <span> y no como <svg> en base.html
+   para que las paginas que dibujan su propia cabecera (entrar) la reciban
+   sin copiar el trazado. Los corchetes son #10b981 porque son una marca, no
+   texto. */
+.marca__cuadro {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 25px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 38 42'%3E%3Cpath d='M10 2H2v38h8M28 2h8v38h-8' fill='none' stroke='%2310b981' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/%3E%3Crect x='10' y='9' width='18' height='4.5' rx='1' fill='%23101318'/%3E%3Crect x='16.75' y='9' width='4.5' height='25' rx='1' fill='%23101318'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* --------------------------------------------------------------- pildora - */
+
+/* La etiqueta del taller: mono en mayusculas con su filo de 4px, como la
+   cinta que se pega a una caja de piezas. */
+.pildora {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border: var(--borde) solid var(--linea-fuerte);
+  border-radius: var(--r-sm);
+  background: var(--papel-3);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+}
+
+.pildora__punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--verde-ink);
+}
+
+.pildora--verde {
+  background: var(--verde-bg);
+  border-color: var(--verde-linea);
+  color: var(--verde-ink);
+}
+
+.pildora--ambar {
+  background: var(--ambar-bg);
+  border-color: var(--ambar-linea);
+  color: var(--ambar-ink);
+}
+.pildora--ambar .pildora__punto { background: var(--ambar-ink); }
+
+.pildora--rojo {
+  background: var(--rojo-bg);
+  border-color: var(--rojo-linea);
+  color: var(--rojo-ink);
+}
+.pildora--rojo .pildora__punto { background: var(--rojo-ink); }
+
+.pildora--apagada { color: var(--tenue); }
+.pildora--apagada .pildora__punto { background: var(--tenue); }
+
+/* La chica va DENTRO de otra cosa: una fila del temario, el pie de una
+   tarjeta. La de tamano normal ahi empuja el renglon. */
+.pildora--chica {
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.pildora--chica .pildora__punto { width: 6px; height: 6px; }
+
+/* ----------------------------------------------------------------- islas - */
+
+/* La isla es la caja que decide: la de compra, el resumen del pedido, las
+   cifras del panel, el diploma. Filo de 2px de tinta sobre blanco, esquinas de
+   8px. Por dentro se parte en bloques con una linea de 1px en vez de con aire:
+   asi el precio, la lista y la letra chica se leen como partes de un mismo
+   documento. El overflow es lo que deja la franja del pie pintada hasta la
+   esquina redonda. */
+.isla {
+  border: var(--borde-fuerte) solid var(--tinta);
+  border-radius: var(--r-lg);
+  background: var(--papel-3);
+  overflow: hidden;
+}
+
+/* La isla de consulta: lo que se mira, no lo que se decide. */
+.isla--suave { border: var(--borde) solid var(--linea); }
+
+.isla--verde {
+  border-color: var(--verde-linea);
+  background: var(--verde-bg);
+}
+
+/* Lo que todavia no existe: los cursos en preparacion, el certificado que aun
+   no se gano. El filo discontinuo es el de una pieza que falta en el plano. */
+.isla--pendiente {
+  border: var(--borde-medio) dashed var(--linea-fuerte);
+  background: transparent;
+}
+
+.isla__bloque { padding: var(--aire-md); }
+
+.isla__bloque + .isla__bloque { border-top: var(--borde) solid var(--linea); }
+
+.isla__pie {
+  padding: var(--aire-sm) var(--aire-md);
+  border-top: var(--borde) solid var(--linea);
+  background: var(--papel-4);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--tenue);
+}
+
+/* El total del pedido: el unico bloque de la isla que se pinta de verde. */
+.isla__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--aire-sm);
+  padding: var(--aire-md);
+  border-top: var(--borde) solid var(--verde-linea);
+  background: var(--verde-bg);
+}
+
+/* La cifra del total va en la display, igual que el precio de la landing y el
+   de la tarjeta: es la misma cifra en tres sitios y tiene que verse igual. */
+.isla__cifra {
+  font-family: var(--display);
+  font-size: clamp(36px, 7vw, 48px);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--verde-hondo);
+  font-variant-numeric: tabular-nums;
+}
+
+/* La isla del pedido se queda a la vista mientras se rellena el formulario de
+   al lado. SOLO en escritorio. */
+@media (min-width: 1000px) {
+  .isla--pegada { position: sticky; top: var(--aire-md); }
+}
+
+/* ----------------------------------------------------------------- filas - */
+
+/* El renglon del sistema: nombre a la izquierda, dato en mono a la derecha y
+   una linea de 1px debajo. */
+.fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--aire-sm);
+  padding: 12px 0;
+  border-bottom: var(--borde) solid var(--linea-suave);
+  color: var(--tinta-2);
+  text-decoration: none;
+}
+
+/* Cuando la fila entera es el enlace tiene que aceptar el pulgar. */
+a.fila { min-height: var(--tap); }
+a.fila:hover { background: var(--verde-bg); }
+
+/* La fila que titula un grupo. Cierra con la linea de tinta, que es lo que
+   separa un modulo del siguiente sin meterlo en una caja. */
+.fila--cabeza {
+  align-items: baseline;
+  padding: 0 0 10px;
+  border-bottom: var(--borde-medio) solid var(--tinta);
+  color: var(--tinta);
+}
+
+/* La misma cabecera con la linea fina, para las listas que ya van dentro de
+   una columna con filo (el indice de la leccion). */
+.fila--cabeza-suave {
+  border-bottom-width: var(--borde);
+  border-bottom-color: var(--linea);
+}
+
+.fila--sin-linea { border-bottom: 0; }
+
+.fila__nombre {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 16px;
+  color: var(--tinta);
+}
+
+/* El dato de la derecha: duracion, tamano, importe. Tabular para que la
+   columna quede recta. */
+.fila__dato {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--tenue);
+  font-variant-numeric: tabular-nums;
+}
+
+/* El grupo de la izquierda cuando el nombre viene con su pildora al lado. El
+   que crece es el GRUPO, no el nombre de dentro: si crece el nombre, la
+   etiqueta se va al filo derecho y acaba pegada al dato. */
+.fila__grupo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------------- avance - */
+
+/* La barra de avance del aula y del panel: un canal y un relleno cuyo ancho
+   escribe el servidor en el atributo style. El ancho va SIEMPRE en el hijo.
+   El relleno es el verde de accion y no el de marca: la barra dice cuanto
+   falta, y eso es un dato, no un adorno. */
+.avance {
+  height: 6px;
+  /* El recorrido se tiene que ver aunque el relleno sea 0%. */
+  background: var(--linea-suave);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.avance__relleno {
+  display: block;
+  height: 100%;
+  background: var(--verde-ink);
+  border-radius: 3px;
+}
+
+/* Fina para la cabecera de una leccion, donde acompana; alta para el embudo
+   del panel, donde la barra ES el grafico. */
+.avance--fina { height: 4px; }
+.avance--alta { height: 20px; border-radius: var(--r-sm); }
+.avance--alta .avance__relleno { border-radius: var(--r-sm); }
+
+.avance__cabeza {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--aire-sm);
+  margin-bottom: var(--aire-xs);
+}
+
+.avance__cifra {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--verde-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- iconos - */
+
+/* Los iconos son de trazo, en una rejilla de 20x20 (los del esquema en 24x24),
+   con las puntas redondeadas como los corchetes de la marca. El color sale de
+   currentColor y nunca de un stroke escrito dentro del SVG: un stroke fijo no
+   sigue a los tokens cuando la banda los da vuelta. */
+.icono {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icono--chico { width: 14px; height: 14px; }
+.icono--grande { width: 22px; height: 22px; stroke-width: 1.6; }
+
+/* El play y las siluetas macizas no llevan trazo: se pintan con fill. */
+.icono--relleno { fill: currentColor; stroke: none; }
+
+.icono--verde { color: var(--verde-ink); }
+.icono--tenue { color: var(--tenue); }
+
+/* ----------------------------------------------------------- formularios - */
+
+/* Los campos son islas chicas: filo de tinta sobre blanco y la esquina de lo
+   que se pulsa. El obligatorio va con el filo medio y el opcional (el cupon)
+   con el fino, para que el ojo sepa cual hay que llenar. */
+.campo {
+  display: grid;
+  gap: 10px;
+}
+
+.campo + .campo { margin-top: var(--aire-md); }
+
+.campo__etiqueta {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tinta-2);
+}
+
+.campo__entrada {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 13px 16px;
+  border: var(--borde-medio) solid var(--tinta);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  color: var(--tinta);
+  font-family: var(--sans);
+  /* 17px y no 16: por debajo de 16px el Safari del iPhone hace zoom al tocar el
+     campo y deja la pagina corrida para el resto de la compra. */
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.campo__entrada::placeholder { color: var(--tenue); }
+
+.campo__entrada--suave { border: var(--borde) solid var(--linea-fuerte); }
+
+/* Un codigo se teclea en mayusculas y se lee en mono, igual que llego en el
+   correo. */
+.campo__entrada--codigo {
+  font-family: var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.campo__pista {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--tenue);
+}
+
+.campo__error {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rojo-ink);
+}
+
+.campo--invalido .campo__entrada { border-color: var(--rojo-ink); }
+
+/* El campo con su boton al lado (cupon y aplicar). A 390px no caben los dos en
+   la misma linea, asi que el boton baja debajo y ocupa el ancho. */
+.campo__fila {
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 600px) {
+  .campo__fila { grid-template-columns: minmax(0, 1fr) auto; }
+}
+
+/* La casilla de aceptar los terminos. El cuadro se dibuja a mano con
+   appearance: none porque el nativo llega azul y distinto en cada sistema. */
+.casilla {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.casilla__control {
+  flex: 0 0 auto;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  border: var(--borde-medio) solid var(--tinta);
+  border-radius: var(--r-sm);
+  background: var(--papel-3);
+  cursor: pointer;
+}
+
+/* Marcada es un cuadro verde con su reserva blanca dentro. La reserva es una
+   sombra interior y no una imagen: ni peticion extra ni fuente de iconos. */
+.casilla__control:checked {
+  background: var(--verde-accion);
+  border-color: var(--verde-accion);
+  box-shadow: inset 0 0 0 3px var(--papel-3);
+}
+
+/* El aviso del formulario entero, arriba y antes de los campos. Con el filo
+   entero del color del nivel y no con una barra a la izquierda: la barra era
+   lenguaje de cita, y esto es una advertencia. */
+.mensaje {
+  border: var(--borde) solid var(--rojo-linea);
+  border-radius: var(--r-md);
+  background: var(--rojo-bg);
+  color: var(--rojo-ink);
+  padding: 12px var(--aire-sm);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mensaje--ok {
+  border-color: var(--verde-linea);
+  background: var(--verde-bg);
+  color: var(--verde-ink);
+}
+
+/* ---------------------------------------------------------------- avisos - */
+
+/* El aviso lleva el filo entero del color de su nivel, sin la barra gruesa a
+   la izquierda: con el fondo del nivel ya se distingue de un vistazo, y la
+   barra era lenguaje de cita. */
+.aviso {
+  border: var(--borde) solid var(--linea);
+  border-radius: var(--r-md);
+  background: var(--papel-3);
+  padding: var(--aire-sm) var(--aire-md);
+  font-size: 15px;
+  color: var(--tinta-2);
+}
+
+.aviso--verde { border-color: var(--verde-linea); background: var(--verde-bg); color: var(--verde-hondo); }
+.aviso--ambar { border-color: var(--ambar-linea); background: var(--ambar-bg); color: var(--ambar-ink); }
+.aviso--rojo { border-color: var(--rojo-linea); background: var(--rojo-bg); color: var(--rojo-ink); }
+
+/* El aviso que se pulsa: icono, texto y la salida a la derecha. */
+.aviso--fila {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: var(--tap);
+  text-decoration: none;
+}
+
+.aviso__texto { flex: 1 1 auto; min-width: 0; }
+
+.aviso__accion {
+  flex: 0 0 auto;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Utilidades de aire. Son las UNICAS: cualquier otra separacion se resuelve
+   con la escala de --aire-* dentro del componente que la necesita. */
+.espaciado-inf { margin-bottom: var(--aire-md); }
+.espaciado-sup { margin-top: var(--aire-lg); }
+.centrado { text-align: center; }
+
+.vacio {
+  text-align: center;
+  padding: var(--aire-xl) 0;
+  display: grid;
+  gap: var(--aire-md);
+  justify-items: center;
+}
+
+/* -------------------------------------------------------------- reduccion - */
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

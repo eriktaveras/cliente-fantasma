@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 38 42" width="38" height="42" role="img" aria-label="Taveras Solutions">
+  <path d="M10 2 H2 V40 H10" fill="none" stroke="#10b981" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M28 2 H36 V40 H28" fill="none" stroke="#10b981" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="10" y="9" width="18" height="4.5" rx="1" fill="#101318"/>
+  <rect x="16.75" y="9" width="4.5" height="25" rx="1" fill="#101318"/>
+</svg>

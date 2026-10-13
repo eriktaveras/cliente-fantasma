@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titulo %}{{ t.error_titulo }} · Cliente Fantasma{% endblock %}
+{% block meta %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block pagina %}error{% endblock %}
+{% block contenido %}
+<div class="envoltura seccion vacio">
+  <p class="rotulo rotulo--verde">{{ t.error_titulo }}</p>
+  <h1 class="titular titular--s">404</h1>
+  <p class="parrafo">{{ mensaje }}</p>
+  <a class="boton boton--primario" href="/">{{ t.error_volver }}</a>
+</div>
+{% endblock %}

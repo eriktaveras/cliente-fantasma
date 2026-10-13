@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block titulo %}{{ t.como_titulo_pagina }} · Cliente Fantasma{% endblock %}
+{% block pagina %}como{% endblock %}
+{% block contenido %}
+<section class="hero">
+  <div class="envoltura">
+    <p class="rotulo rotulo--verde">{{ t.como_rotulo }}</p>
+    <h1 class="titular titular--m hero__titular">{{ t.como_titular }}</h1>
+    <p class="bajada">{{ t.como_bajada }}</p>
+  </div>
+</section>
+
+<section class="envoltura seccion">
+  <ol class="como">
+    {% for titulo, texto in t.como_pasos %}
+    <li class="como__paso">
+      <span class="como__n">{{ "%02d" | format(loop.index) }}</span>
+      <div><h2 class="subtitulo">{{ titulo }}</h2><p class="parrafo">{{ texto }}</p></div>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
+<section class="envoltura seccion" aria-labelledby="h-modelos">
+  <div class="rejilla rejilla--2 rejilla--apretada">
+    <div class="isla">
+      <div class="isla__bloque">
+        <h2 class="rotulo rotulo--verde" id="h-modelos">{{ t.como_modelos_rotulo }}</h2>
+        <div class="fila fila--cabeza"><span class="fila__nombre rotulo">{{ t.rol }}</span><span class="rotulo">{{ t.modelo }}</span></div>
+        {% for rol in ("agente", "simulador", "juez", "optimizador", "generador") if rol in modelos %}
+        <div class="fila"><span class="fila__nombre">{{ t.roles[rol] }}</span><span class="fila__dato modelo">{{ modelos[rol] }}</span></div>
+        {% endfor %}
+      </div>
+      <p class="isla__pie">Nebius Token Factory · api.tokenfactory.nebius.com</p>
+    </div>
+    <div class="isla isla--suave">
+      <div class="isla__bloque">
+        <h2 class="rotulo rotulo--verde">{{ t.como_costos_rotulo }}</h2>
+        <p class="parrafo espaciado-arriba">{{ t.como_costos }}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="envoltura seccion" aria-labelledby="h-remoto">
+  <h2 class="rotulo rotulo--verde" id="h-remoto">{{ t.como_remoto_rotulo }}</h2>
+  <p class="parrafo espaciado-arriba">{{ t.como_remoto }}</p>
+  <div class="rejilla rejilla--2 rejilla--apretada espaciado-arriba">
+    <div><p class="rotulo rotulo--chico">{{ t.como_remoto_entrada }}</p>
+<pre class="codigo">POST https://tu-bot/webhook
+X-Cliente-Fantasma: true
+
+{"sesion": "fuera_de_catalogo-v0-r0-1a2b3c4d",
+ "mensaje": "klk, tienen pan sobao?",
+ "historial": [{"rol": "cliente", "texto": "..."},
+               {"rol": "bot", "texto": "..."}]}</pre></div>
+    <div><p class="rotulo rotulo--chico">{{ t.como_remoto_salida }}</p>
+<pre class="codigo">{"respuesta": "Hola, pan sobao no tenemos..."}</pre>
+      <p class="espaciado-arriba"><a class="enlace-accion" href="/n8n/conector.json" download>{{ t.descargar_conector }}</a></p></div>
+  </div>
+  <p class="espaciado-arriba"><a class="boton boton--primario" href="/">{{ t.nav_inicio }}</a></p>
+</section>
+{% endblock %}

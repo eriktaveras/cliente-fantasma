@@ -1,0 +1,118 @@
+{
+  "name": "Cliente Fantasma - conector de tu bot",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Cliente Fantasma: conector\n\n1. Activa el workflow y copia la **Production URL** del Webhook (https).\n2. Pégala en Cliente Fantasma como URL de tu bot.\n3. Cambia el nodo **Tu agente** por tu bot real (AI Agent, OpenAI, lo que uses). Debe dejar el texto en el campo `respuesta`.\n\nEntrada: `{sesion, mensaje, historial: [{rol: cliente|bot, texto}]}`.\nSalida: `{respuesta}`.\n\nCada request trae el encabezado `X-Cliente-Fantasma: true`: úsalo para no guardar estas pruebas en tu CRM ni mandar avisos reales. Usa `sesion` como clave de memoria del chat.",
+        "height": 380,
+        "width": 520
+      },
+      "id": "5b0f0c4e-0d6a-4c1e-9a51-1f0a7c2e9001",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-120, -420]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cliente-fantasma",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5b0f0c4e-0d6a-4c1e-9a51-1f0a7c2e9002",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "5b0f0c4e-0d6a-4c1e-9a51-1f0a7c2e9003"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "sesion",
+              "value": "={{ $json.body.sesion }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "mensaje",
+              "value": "={{ $json.body.mensaje }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "historial",
+              "value": "={{ ($json.body.historial || []).map(h => (h.rol === 'cliente' ? 'Cliente: ' : 'Bot: ') + h.texto).join('\\n') }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "es_prueba",
+              "value": "={{ $json.headers['x-cliente-fantasma'] === 'true' }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5b0f0c4e-0d6a-4c1e-9a51-1f0a7c2e9004",
+      "name": "Leer mensaje",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "respuesta",
+              "value": "=Hola, soy un bot de prueba. Recibí: {{ $json.mensaje }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5b0f0c4e-0d6a-4c1e-9a51-1f0a7c2e9005",
+      "name": "Tu agente",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [440, 0],
+      "notes": "Reemplaza este nodo por tu bot. Tiene a mano sesion, mensaje e historial (texto). Debe dejar la respuesta en el campo 'respuesta'.",
+      "notesInFlow": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { respuesta: $json.respuesta } }}",
+        "options": {}
+      },
+      "id": "5b0f0c4e-0d6a-4c1e-9a51-1f0a7c2e9006",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Leer mensaje", "type": "main", "index": 0 }]]
+    },
+    "Leer mensaje": {
+      "main": [[{ "node": "Tu agente", "type": "main", "index": 0 }]]
+    },
+    "Tu agente": {
+      "main": [[{ "node": "Responder", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

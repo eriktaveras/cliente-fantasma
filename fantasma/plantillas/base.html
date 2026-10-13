@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="{{ t.html_lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block titulo %}{{ t.inicio_titulo_pagina }}{% endblock %}</title>
+  <meta name="description" content="{{ t.inicio_descripcion }}">
+  {% block meta %}{% endblock %}
+  <meta name="theme-color" content="#F1F2EE">
+  <link rel="icon" href="/static/marca/taveras-favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&amp;family=Hanken+Grotesk:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600;700&amp;display=swap">
+  <link rel="stylesheet" href="/static/css/taller.css">
+  <link rel="stylesheet" href="/static/css/fantasma.css?v=1">
+  <script type="application/json" id="textos">{{ textos_js | tojson }}</script>
+  <script src="/static/js/fantasma.js?v=1" defer></script>
+</head>
+<body data-pagina="{% block pagina %}{% endblock %}">
+  <a class="saltar" href="#principal">{{ t.saltar }}</a>
+
+  <header class="cabecera">
+    <div class="envoltura cabecera__fila">
+      <a class="cabecera__marca" href="/">
+        <span class="marca__cuadro" aria-hidden="true"></span>
+        <span class="cabecera__nombre">{{ t.marca }}</span>
+      </a>
+      <nav class="cabecera__nav" aria-label="{{ t.marca }}">
+        <a class="cabecera__enlace" href="/como-funciona">{{ t.nav_como }}</a>
+        <a class="cabecera__idioma" href="/idioma/{{ otro_idioma }}?volver={{ request.url.path | urlencode }}" lang="{{ otro_idioma }}" hreflang="{{ otro_idioma }}">
+          <span aria-hidden="true">{{ t.otro_idioma_corto }}</span><span class="oculto-visual">{{ t.otro_idioma }}</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="principal" class="principal" tabindex="-1">
+    {% block contenido %}{% endblock %}
+  </main>
+
+  <footer class="pie">
+    <div class="envoltura pie__fila">
+      <span class="marca__cuadro" aria-hidden="true"></span>
+      <span class="pie__texto">{{ t.pie }}</span>
+    </div>
+  </footer>
+</body>
+</html>
