@@ -295,6 +295,14 @@ def test_ficha_sin_material_queda_en_error(servicio):
     assert fila.estado == "error" and "Sin material" in fila.motivo
 
 
+def test_errores_sin_costo_no_gastan_pruebas_del_dia(servicio):
+    servicio.corridas_por_dia = 1
+    for _ in range(3):
+        with pytest.raises(ValueError):
+            correr(servicio.crear_ficha([], "  ", "1.2.3.4"))
+    correr(servicio.crear_ficha([], COLMADO, "1.2.3.4"))
+
+
 def test_no_se_lanza_dos_veces(servicio):
     async def flujo():
         run_id, _ = await ficha_y_lanzar(servicio)

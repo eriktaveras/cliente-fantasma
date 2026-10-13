@@ -92,7 +92,11 @@ class Indice:
         return self.db.execute(f"SELECT COUNT(*) FROM corridas WHERE ip_hash = ? AND estado IN ({marcas})", (ip_hash, *ACTIVOS)).fetchone()[0]
 
     def del_dia(self, ip_hash: str) -> int:
-        return self.db.execute("SELECT COUNT(*) FROM corridas WHERE ip_hash = ? AND substr(creado, 1, 10) = ?", (ip_hash, _hoy())).fetchone()[0]
+        # Un error que no gastó nada (ficha sin material, Tavily caído) no le quita una prueba al visitante.
+        return self.db.execute(
+            "SELECT COUNT(*) FROM corridas WHERE ip_hash = ? AND substr(creado, 1, 10) = ? AND NOT (estado = 'error' AND costo_usd = 0)",
+            (ip_hash, _hoy()),
+        ).fetchone()[0]
 
     def gasto_del_dia(self) -> float:
         return self.db.execute("SELECT COALESCE(SUM(costo_usd), 0) FROM corridas WHERE substr(creado, 1, 10) = ?", (_hoy(),)).fetchone()[0]
