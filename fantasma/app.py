@@ -222,12 +222,15 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
     def srv(request: Request) -> Servicio:
         return request.app.state.servicio
 
+    def hay_tavily() -> bool:
+        return bool(os.environ.get("TAVILY_API_KEY"))
+
     def pagina(request: Request, nombre: str, status: int = 200, **ctx: Any) -> HTMLResponse:
         idioma = idioma_de(request)
         t = TEXTOS[idioma]
         textos_js = {k: t[k] for k in TEXTOS_JS}
         return plantillas.TemplateResponse(
-            request, nombre, {"t": t, "idioma": idioma, "otro_idioma": "en" if idioma == "es" else "es", "textos_js": textos_js, **ctx}, status_code=status
+            request, nombre, {"t": t, "idioma": idioma, "otro_idioma": "en" if idioma == "es" else "es", "textos_js": textos_js, "tavily": hay_tavily(), **ctx}, status_code=status
         )
 
     # -------------------------------------------- dueño de cada corrida: cookie firmada con los run_id de este navegador
@@ -320,6 +323,8 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
                 raise Rechazo("err_texto_largo")
             if not urls and not datos["texto"]:
                 raise Rechazo("err_sin_material")
+            if not datos["texto"] and not hay_tavily():
+                raise Rechazo("err_sin_tavily")
             modo = "remoto" if datos["modo"] == "remoto" else "generado"
             encabezados = {}
             if modo == "remoto":

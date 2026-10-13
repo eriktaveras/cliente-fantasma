@@ -315,3 +315,16 @@ def test_encabezados_de():
     assert web.encabezados_de("Authorization: Bearer abc\nX-Tienda: 1") == {"Authorization": "Bearer abc", "X-Tienda": "1"}
     with pytest.raises(web.Rechazo):
         web.encabezados_de("Mal Nombre: x")
+
+
+def test_sin_tavily_solo_url_pide_texto(cliente, servicio, monkeypatch):
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    assert 'name="urls"' not in cliente.get("/").text
+    r = cliente.post("/probar", data={"texto": "", "urls": "https://negocio.example"})
+    assert r.status_code == 400 and "no lee URLs" in r.text
+    assert servicio.indice.listar() == []
+
+
+def test_con_tavily_muestra_urls(cliente, monkeypatch):
+    monkeypatch.setenv("TAVILY_API_KEY", "tvly-prueba")
+    assert 'name="urls"' in cliente.get("/").text

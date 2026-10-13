@@ -55,14 +55,16 @@
           <input class="campo__entrada campo__entrada--suave" name="nombre" maxlength="200" autocomplete="organization" value="{{ datos.nombre or '' }}" aria-describedby="pista-nombre">
           <span class="campo__pista" id="pista-nombre">{{ t.campo_nombre_pista }}</span>
         </label>
+        {% if tavily %}
         <label class="campo">
           <span class="campo__etiqueta">{{ t.campo_urls }}</span>
           <textarea class="campo__entrada campo__entrada--suave" name="urls" rows="2" maxlength="2600" inputmode="url" placeholder="https://" aria-describedby="pista-urls">{{ datos.urls or '' }}</textarea>
           <span class="campo__pista" id="pista-urls">{{ t.campo_urls_pista }}</span>
         </label>
+        {% endif %}
         <label class="campo">
           <span class="campo__etiqueta">{{ t.campo_texto }}</span>
-          <textarea class="campo__entrada" name="texto" rows="6" maxlength="20000" placeholder="{{ t.campo_texto_ejemplo }}" aria-describedby="pista-texto">{{ datos.texto or '' }}</textarea>
+          <textarea class="campo__entrada" name="texto" rows="6" maxlength="20000"{% if not tavily %} required{% endif %} placeholder="{{ t.campo_texto_ejemplo }}" aria-describedby="pista-texto">{{ datos.texto or '' }}</textarea>
           <span class="campo__pista" id="pista-texto">{{ t.campo_texto_pista }}</span>
         </label>
       </div>
