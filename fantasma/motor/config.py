@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field, model_validator
 
-RolNombre = Literal["agente", "simulador", "juez", "optimizador", "generador", "produccion"]
+RolNombre = Literal["agente", "simulador", "juez", "optimizador", "generador", "ficha", "produccion"]
 
 
 class Proveedor(BaseModel):

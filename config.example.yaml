@@ -11,6 +11,7 @@ roles:
   juez:        {proveedor: nebius, modelo: nvidia/Nemotron-3-Ultra-550b-a55b,     temperatura: 0.0, razonamiento: false, max_tokens: 3000}
   optimizador: {proveedor: nebius, modelo: nvidia/Nemotron-3-Ultra-550b-a55b,     temperatura: 0.7, razonamiento: true,  max_tokens: 16000}
   generador:   {proveedor: nebius, modelo: nvidia/Nemotron-3-Ultra-550b-a55b,     temperatura: 0.7, razonamiento: true,  max_tokens: 12000}
+  ficha:       {proveedor: nebius, modelo: nvidia/Nemotron-3-Ultra-550b-a55b,     temperatura: 0.0, razonamiento: true,  max_tokens: 12000}
 
 concurrency: 8
 repetitions_per_case: 1

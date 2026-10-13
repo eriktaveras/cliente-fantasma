@@ -137,7 +137,7 @@ def config() -> Config:
     rol = {"proveedor": "local", "modelo": "falso"}
     return Config(
         proveedores={"local": {"base_url": "http://falso/v1", "api_key": "x"}},
-        roles={r: rol for r in ("agente", "simulador", "juez", "optimizador", "generador")},
+        roles={r: rol for r in ("agente", "simulador", "juez", "optimizador", "generador", "ficha")},
         concurrency=2,
         repetitions_per_case=2,
         max_turns=4,

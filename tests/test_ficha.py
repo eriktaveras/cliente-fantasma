@@ -80,7 +80,7 @@ def test_completar_faltantes_anota_precios_y_horario():
 
 async def test_investigar_solo_texto_estructura_y_reintenta_si_inventa_precio(llm):
     inventada = _ficha(productos=[f.Producto(nombre="Arroz Selecto 5 lb", precio=Decimal(300))])
-    llm.encolar("generador", inventada, _ficha())
+    llm.encolar("ficha", inventada, _ficha())
     avisos: list[str] = []
     ficha = await f.investigar(llm, texto=TEXTO_COLMADO, progreso=avisos.append)
     assert [p.precio for p in ficha.con_precio()] == [Decimal(245), Decimal(185)]
@@ -98,7 +98,7 @@ async def test_investigar_sin_material_falla(llm):
 
 async def test_investigar_se_rinde_tras_intentos(llm):
     mala = _ficha(productos=[f.Producto(nombre="Arroz", precio=Decimal(777))])
-    llm.encolar("generador", mala, mala, mala)
+    llm.encolar("ficha", mala, mala, mala)
     with pytest.raises(ErrorTecnico):
         await f.investigar(llm, texto=TEXTO_COLMADO)
 
@@ -130,7 +130,7 @@ def _transporte(pedidos: list[httpx.Request], extract_status: int = 200) -> http
 
 async def test_investigar_con_tavily_usa_extract_y_search(llm):
     pedidos: list[httpx.Request] = []
-    llm.encolar("generador", _ficha())
+    llm.encolar("ficha", _ficha())
     avisos: list[str] = []
     ficha = await f.investigar(
         llm,
@@ -145,6 +145,8 @@ async def test_investigar_con_tavily_usa_extract_y_search(llm):
     assert all(r.headers["Authorization"] == "Bearer tvly-prueba" for r in pedidos)
     cuerpo = json.loads(pedidos[1].content)
     assert cuerpo["query"] == "Colmado La Esquina Villa Consuelo" and cuerpo["include_raw_content"] == "markdown"
+    assert cuerpo["include_domains"] == ["colmado.do"]
+    assert "«Colmado La Esquina Villa Consuelo»" in llm.llamadas[0][1][1]["content"]
     assert ficha.fuentes == ["https://colmado.do/precios", "https://ig.com/colmado"]
     assert any("caida" in a for a in avisos)
     material = llm.llamadas[0][1][1]["content"]
@@ -154,7 +156,7 @@ async def test_investigar_con_tavily_usa_extract_y_search(llm):
 
 async def test_investigar_si_tavily_falla_sigue_con_el_texto(llm):
     pedidos: list[httpx.Request] = []
-    llm.encolar("generador", _ficha())
+    llm.encolar("ficha", _ficha())
     ficha = await f.investigar(
         llm, urls=["https://colmado.do/precios"], tavily_key="tvly-mala", texto=TEXTO_COLMADO,
         http=httpx.AsyncClient(transport=httpx.MockTransport(lambda r: pedidos.append(r) or httpx.Response(401, json={}))),
@@ -215,3 +217,46 @@ async def test_real_colmado_nebius():
     assert any("plátano" in x.lower() for x in ficha.faltantes)
     datos = f.a_datos(ficha, f.a_rubro(ficha))
     assert len(datos.catalogo) == 5
+
+
+async def test_solo_nombre_busca_en_toda_la_web(llm):
+    pedidos: list[httpx.Request] = []
+    llm.encolar("ficha", _ficha())
+    await f.investigar(llm, nombre="Colmado La Esquina", texto="RD$245 y RD$185", tavily_key="k", http=httpx.AsyncClient(transport=_transporte(pedidos)))
+    assert "include_domains" not in json.loads(pedidos[0].content)
+
+
+async def test_pocos_productos_se_piden_aparte(llm):
+    llm.encolar(
+        "ficha",
+        _ficha(productos=[]),
+        f.ListaProductos(
+            productos=[
+                f.Producto(nombre="Asesoría", precio=Decimal(99)),
+                f.Producto(nombre="asesoría"),
+                f.Producto(nombre="Curso de n8n", precio=Decimal(49)),
+            ]
+        ),
+    )
+    ficha = await f.investigar(llm, texto="Asesorías a domicilio y curso de n8n a 49 dólares")
+    assert [(p.nombre, p.precio) for p in ficha.productos] == [("Asesoría", None), ("Curso de n8n", Decimal(49))]
+
+
+
+def test_solo_nombre_se_queda_con_la_web_del_negocio():
+    async def flujo():
+        def responder(req):
+            return httpx.Response(200, json={"results": [
+                {"url": "https://www.otrataveras.com", "content": "inmuebles", "raw_content": "Flipping inmobiliario"},
+                {"url": "https://taverassolutions.com/", "content": "c", "raw_content": "Automatización con n8n"},
+            ]})
+        async with httpx.AsyncClient(transport=httpx.MockTransport(responder)) as http:
+            return await f.buscar_en_web(http, "k", [], "Taveras Solutions", None)
+
+    import asyncio
+    assert asyncio.run(flujo()) == [("https://taverassolutions.com/", "Automatización con n8n")]
+
+
+def test_una_sola_fuente_no_se_corta_a_6000():
+    material = f.armar_material([("https://a.com", "x" * 20000)], "")
+    assert material.count("x") == 20000

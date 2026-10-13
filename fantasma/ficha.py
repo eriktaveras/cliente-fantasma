@@ -5,6 +5,7 @@ La ficha es la verdad contra la que se juzga al bot: catálogo y FAQ salen de aq
 
 import re
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlparse
 
 import httpx
 from pydantic import BaseModel
@@ -14,19 +15,23 @@ from fantasma.motor.generador import Progreso, prefijo
 from fantasma.motor.herramientas.faq import palabras
 from fantasma.motor.llm import ErrorTecnico
 
-ROL = "generador"
+# Extraer datos pide determinismo: rol propio con temperatura 0 y sin razonamiento (el generador va a 0.7 y razona).
+ROL = "ficha"
 INTENTOS = 3
 TAVILY = "https://api.tavily.com"
 MAX_RESULTADOS_BUSQUEDA = 5
 MAX_POR_FUENTE = 6000
 MAX_MATERIAL = 30000
+MIN_PRODUCTOS = 3
 PRECIO_EN_TEXTO = re.compile(r"(RD\$|US\$|\$|€|\bCOP|\bMXN|\bDOP)\s?\d")
 
+# Probado contra Ultra (13-oct): un sistema con "REGLA DURA: no inventes productos" lo volvía tan cauto que devolvía `productos`
+# vacío o decía que no había material. Se pide extraer todo lo que el material nombra; lo que no dice va a `faltantes`.
 SISTEMA = (
-    "Eres un analista que arma la ficha de un negocio a partir de material real (su web, redes o lo que escribió el dueño). "
-    "Respondes solo con JSON válido que cumple exactamente el esquema pedido. "
-    "REGLA DURA: no inventes productos, precios, horarios, zonas, formas de pago ni políticas. Solo lo que dice el material. "
-    "Si un producto aparece sin precio, precio=null. Todo dato que no esté en el material va a `faltantes` en una frase corta."
+    "Eres un analista que arma la ficha de un negocio leyendo su material (su web, redes o lo que escribió el dueño), que viene "
+    "en el mensaje del usuario. Respondes en español, solo con JSON que cumple el esquema. "
+    "Extrae todo lo que el material nombra: cada producto o servicio, precios, horario, zonas, formas de pago y políticas. "
+    "Copia los datos tal como aparecen; si un dato no está en el material, déjalo vacío (precio=null) y anótalo en `faltantes`."
 )
 
 
@@ -98,21 +103,32 @@ async def buscar_en_web(http: httpx.AsyncClient, clave: str, urls: list[str], no
     consulta = nombre or " ".join(urls)
     if consulta:
         try:
-            r = await _tavily(
-                http, "search", clave, {"query": consulta, "max_results": MAX_RESULTADOS_BUSQUEDA, "include_raw_content": "markdown"}
-            )
+            cuerpo = {"query": consulta, "max_results": MAX_RESULTADOS_BUSQUEDA, "include_raw_content": "markdown"}
+            if urls:
+                # Con la web del negocio en mano, buscar fuera de ella trae negocios de nombre parecido.
+                cuerpo["include_domains"] = sorted({urlparse(u).hostname for u in urls if urlparse(u).hostname})
+            r = await _tavily(http, "search", clave, cuerpo)
             ya = {u for u, _ in fuentes}
             fuentes += [(x["url"], x.get("raw_content") or x["content"]) for x in r.get("results", []) if x["url"] not in ya]
         except httpx.HTTPError as exc:
             _avisar(progreso, f"tavily search falló: {exc}")
+    fuentes = [(u, c) for u, c in fuentes if c and c.strip()]
+    if nombre and not urls:
+        # Buscar por nombre trae negocios parecidos: si un dominio lleva el nombre del negocio, es su web y se usa solo esa.
+        clave_nombre = re.sub(r"[^a-z0-9]", "", nombre.lower())
+        propias = [(u, c) for u, c in fuentes if clave_nombre and clave_nombre in re.sub(r"[^a-z0-9]", "", urlparse(u).hostname or "")]
+        if propias:
+            fuentes = propias
     _avisar(progreso, f"tavily: {len(fuentes)} fuentes")
-    return [(u, c) for u, c in fuentes if c and c.strip()]
+    return fuentes
 
 
 def armar_material(fuentes: list[tuple[str, str]], texto: str) -> str:
     # El texto del dueño va primero: si hay que recortar, se pierde web, no lo que él escribió.
     partes = [f"## Texto del dueño del negocio\n{texto.strip()}"] if texto.strip() else []
-    partes += [f"## Fuente: {u}\n{c.strip()[:MAX_POR_FUENTE]}" for u, c in fuentes]
+    # Con pocas fuentes cada una puede ocupar más: la web del negocio sola no se corta antes de llegar a sus servicios.
+    tope = max(MAX_POR_FUENTE, MAX_MATERIAL // max(len(fuentes), 1))
+    partes += [f"## Fuente: {u}\n{c.strip()[:tope]}" for u, c in fuentes]
     return "\n\n".join(partes)[:MAX_MATERIAL]
 
 
@@ -166,12 +182,48 @@ def completar_faltantes(ficha: Ficha) -> Ficha:
     return ficha.model_copy(update={"faltantes": list(vistos.values())})
 
 
-async def estructurar(llm, material: str, fuentes: list[str], progreso: Progreso = None) -> Ficha:
-    instrucciones = (
-        f"Material del negocio:\n\n{material}\n\n---\n"
-        "Arma la ficha del negocio. `moneda` es el código ISO de la moneda en que cobra (DOP, USD, MXN, EUR o COP); "
+class ListaProductos(BaseModel):
+    productos: list[Producto]
+
+
+async def completar_productos(llm, ficha: Ficha, material: str, nombre: str) -> Ficha:
+    """Con el material largo, la ficha completa a veces trae solo el producto de la última fuente; pedida sola, la lista sale
+    entera (probado 13-oct con taverassolutions.com: 1 contra 7-8). Los precios que no están en el material se quitan."""
+    mensajes = [
+        {"role": "system", "content": "Respondes en español, solo con JSON que cumple el esquema."},
+        {
+            "role": "user",
+            "content": f"Material del negocio:\n\n{material}\n\n---\nLista cada producto o servicio que ofrece "
+            f"{f'«{nombre}»' if nombre else 'este negocio'} según el material: nombre, categoria (una o dos palabras), precio "
+            "(solo el número; null si el material no lo da) y un detalle corto. Solo lo que el material nombra.",
+        },
+    ]
+    numeros = numeros_en(material)
+    vistos: dict[str, Producto] = {}
+    for p in (await llm.estructurado(ROL, mensajes, ListaProductos)).productos:
+        if p.nombre.strip():
+            vistos.setdefault(p.nombre.strip().lower(), p if p.precio in numeros or p.precio is None else p.model_copy(update={"precio": None}))
+    lista = list(vistos.values())
+    return ficha.model_copy(update={"productos": lista}) if len(lista) > len(ficha.productos) else ficha
+
+
+async def estructurar(llm, material: str, fuentes: list[str], progreso: Progreso = None, nombre: str = "") -> Ficha:
+    objetivo = (
+        f"El negocio que hay que fichar se llama «{nombre}». Usa solo lo que habla de él y descarta cualquier fuente sobre otro "
+        "negocio u otra persona aunque el nombre se parezca. "
+        if nombre
+        else ""
+    )
+    # Las reglas van antes del material y al final solo un recordatorio corto: con el bloque largo de reglas después de ~15k
+    # caracteres de material, Ultra respondía que no había recibido material (probado 13-oct).
+    reglas = (
+        f"{objetivo}"
+        "`moneda` es el código ISO de la moneda en que cobra (DOP, USD, MXN, EUR o COP); "
         "`precio` es solo el número, sin símbolo ni separadores de miles. "
-        "Incluye en `productos` cada producto o servicio que el material nombre, con o sin precio. "
+        "`productos` lleva cada producto o servicio que el material nombre, con o sin precio: un servicio, plan, curso, "
+        "paquete o membresía también es un producto (precio=null si no lo dice). "
+        "Usa también los datos parciales: si dice 'respondemos de lunes a viernes', eso va en `horario`; a `faltantes` va solo lo "
+        "que el material no dice en absoluto. "
         "`categoria` agrupa productos parecidos en una o dos palabras (p. ej. granos, bebidas, embutidos). "
         "`pais` puede deducirse de la ciudad o la moneda que nombra el material. "
         "`disponible=false` solo si el material dice que está agotado. `tono` describe cómo le habla el negocio a sus clientes. "
@@ -179,11 +231,22 @@ async def estructurar(llm, material: str, fuentes: list[str], progreso: Progreso
         "`zonas_entrega` cada zona o sector donde entrega. "
         "`preguntas_frecuentes` solo con respuestas que el material da. Deja `fuentes` vacía."
     )
+    instrucciones = (
+        f"Cómo llenar la ficha:\n{reglas}\n\n"
+        f"=== MATERIAL DEL NEGOCIO ===\n\n{material}\n\n=== FIN DEL MATERIAL ===\n\n"
+        "Arma ahora la ficha con el material de arriba."
+    )
     mensajes = [{"role": "system", "content": SISTEMA}, {"role": "user", "content": instrucciones}]
-    for _ in range(INTENTOS):
+    for intento in range(INTENTOS):
         ficha = await llm.estructurado(ROL, mensajes, Ficha)
         problemas = validar_ficha(ficha, material)
+        if intento == INTENTOS - 1:
+            # Con material de la web, un "$" de otro sitio no prueba que este negocio venda algo: el último intento no se bloquea
+            # por `productos` vacío y la lista se pide aparte abajo.
+            problemas = [x for x in problemas if "vino vacío" not in x]
         if not problemas:
+            if len(ficha.productos) < MIN_PRODUCTOS:
+                ficha = await completar_productos(llm, ficha, material, nombre)
             return completar_faltantes(ficha.model_copy(update={"fuentes": fuentes}))
         _avisar(progreso, f"ficha: no valida ({'; '.join(problemas[:3])}); reintento")
         mensajes = [
@@ -213,7 +276,7 @@ async def investigar(
     if not material:
         raise ValueError("Sin material del negocio: pega un texto o da una URL con Tavily activo")
     _avisar(progreso, f"estructurando ficha con {len(material)} caracteres de material")
-    return await estructurar(llm, material, [u for u, _ in fuentes], progreso)
+    return await estructurar(llm, material, [u for u, _ in fuentes], progreso, nombre)
 
 
 # ---------------------------------------------------------------- 3. ficha -> estructuras del motor
