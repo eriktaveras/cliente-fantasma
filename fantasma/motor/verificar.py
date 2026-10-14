@@ -110,6 +110,55 @@ def _sumas(valores: list[Decimal]) -> set[Decimal]:
     return {s for s, n in parciales if n >= 2}
 
 
+# Solo asociaciones explícitas: lo implícito (presupuestos, descuentos condicionales,
+# pronombres, totales) lo resuelve el juez con la ficha, no una bolsa global de cifras.
+_PRECIO_DIRECTO = re.compile(r"\s*(?:cuesta|vale|tiene un precio de|precio(?: es)?|a un precio de|está en|esta en)\s*", re.IGNORECASE)
+_MONEDAS = {"us$": "USD", "usd": "USD", "dólares": "USD", "dolares": "USD", "rd$": "DOP", "dop": "DOP",
+            "mx$": "MXN", "mxn": "MXN", "eur": "EUR", "€": "EUR", "euros": "EUR", "cop": "COP"}
+
+
+def _importe(m: re.Match) -> Decimal:
+    return _numero(m["num"]) * (_MULTIPLICADOR[m["mult"].lower()] if m["mult"] else 1)
+
+
+def _productos(data: Any, productos: dict[str, tuple[Decimal, str, str]]) -> None:
+    """Conserva id-precio-moneda de resultados estructurados exitosos."""
+    if isinstance(data, BaseModel):
+        data = data.model_dump()
+    if isinstance(data, dict):
+        if data.get("id") and "precio" in data and data.get("moneda"):
+            try:
+                productos[str(data["id"])] = (Decimal(str(data["precio"])), str(data["moneda"]).upper(), str(data.get("nombre", "")))
+            except (InvalidOperation, ValueError):
+                pass
+        for valor in data.values():
+            _productos(valor, productos)
+    elif isinstance(data, (list, tuple)):
+        for valor in data:
+            _productos(valor, productos)
+
+
+def _precios_explicitos(texto: str, productos: dict[str, tuple[Decimal, str, str]], cantidades: set[int]) -> list[str]:
+    errores = []
+    for id, (precio, moneda, nombre) in productos.items():
+        for etiqueta in {id, nombre} - {""}:
+            for ref in re.finditer(r"(?<!\w)" + re.escape(etiqueta) + r"(?!\w)", texto, re.IGNORECASE):
+                conector = _PRECIO_DIRECTO.match(texto, ref.end())
+                if not conector:
+                    continue
+                m = _MONTO.match(texto, conector.end())
+                if not m or not (m["pre"] or m["suf"] or m["mult"]):
+                    continue
+                importe = _importe(m)
+                divisa = _MONEDAS.get((m["pre"] or "").lower()) or _MONEDAS.get((m["suf"] or "").lower())
+                # Un importe por varias unidades puede ser un subtotal legítimo.
+                # La relación semántica cantidad-producto se revisa en el juez.
+                permitidos = {precio, *(precio * q for q in cantidades)}
+                if not _cerca(importe, permitidos) or (divisa and divisa != moneda):
+                    errores.append(f"precio de {id}: {m.group(0).strip()} (ficha: {precio} {moneda})")
+    return errores
+
+
 def _sin_inventos(t: Transcripcion, spec: Spec, caja: Caja) -> Verificacion:
     hechos = caja.hechos()
     catalogo = [i.id for i in spec.datos.catalogo]
@@ -118,22 +167,34 @@ def _sin_inventos(t: Transcripcion, spec: Spec, caja: Caja) -> Verificacion:
     # Envío, pedido mínimo y demás montos de la ficha viven en la FAQ, que no deja hechos en la caja.
     cifras = precios | {m for f in spec.datos.faq for m in montos(f"{f.pregunta} {f.respuesta}")}
     for ll in t.llamadas():
-        _recorrer(ll.resultado.data, ids, cifras)
-    for texto in _textos(t, "cliente"):
-        cifras.update(montos(texto))
-        cifras.update(_numero(n) for n in re.findall(r"\d+(?:[.,]\d+)*", texto))
+        if ll.resultado.ok:
+            _recorrer(ll.resultado.data, ids, cifras)
+    # Cifras del cliente son referencias a revisar por el juez, nunca hechos del negocio.
+    cliente = {m for texto in _textos(t, "cliente") for m in montos(texto)}
     # Sin llamar a pedidos (y siempre en remoto) el bot calcula a mano: precio por cantidad y la suma del pedido.
-    cifras |= {p * q for p in precios for q in _cantidades(_textos(t, "cliente") + _textos(t, "agente"))}
+    cantidades = _cantidades(_textos(t, "cliente") + _textos(t, "agente"))
+    cifras |= {p * q for p in precios for q in cantidades}
 
     patron = _patron_ids(catalogo)
     inventos: list[str] = []
-    for texto in _textos(t, "agente"):
+    productos = {i.id: (i.precio, i.moneda, i.nombre) for i in spec.datos.catalogo}
+    for turno in t.turnos:
+        if turno.rol != "agente":
+            continue
+        for ll in turno.tools:
+            if ll.resultado.ok:
+                _productos(ll.resultado.data, productos)
+        texto = turno.texto
+        inventos.extend(_precios_explicitos(texto, productos, cantidades))
         if patron:
             inventos += [m.group(0) for m in patron.finditer(texto) if m.group(0).upper() not in ids]
         dichos = montos(texto)
         conocidos = [m for m in dichos if _cerca(m, cifras)]
         totales = _sumas(conocidos)
-        inventos += [f"monto {m}" for m in dichos if not _cerca(m, cifras | totales)]
+        # No fallar por repetir el presupuesto del cliente. Las afirmaciones ambiguas
+        # se contrastan en el juez; una afirmación explícita de precio NO lo hereda.
+        referencias = cifras | totales | cliente
+        inventos += [f"monto {m}" for m in dichos if not _cerca(m, referencias)]
     inventos = list(dict.fromkeys(inventos))
     return Verificacion(id="sin_inventos", ok=not inventos, critica=True, detalle=", ".join(inventos))
 

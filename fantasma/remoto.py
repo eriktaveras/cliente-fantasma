@@ -67,11 +67,15 @@ async def destino(remoto: Remoto, inseguro: bool = False) -> tuple[str, str, str
     Se conecta a la IP que se validó y no al nombre: si httpx resolviera otra vez, un DNS con TTL 0 (rebinding) podría
     contestar una IP interna en la segunda consulta.
     """
-    u = urlsplit(remoto.url)
+    try:
+        u = urlsplit(remoto.url)
+        puerto = u.port
+    except ValueError as exc:
+        raise URLNoPermitida("remoto: URL o puerto inválido") from exc
     if u.scheme not in (("https", "http") if inseguro else ("https",)) or not u.hostname:
         raise URLNoPermitida(f"remoto: solo se aceptan URLs https con host: {remoto.url!r}")
     try:
-        ips = await resolver(u.hostname, u.port or (443 if u.scheme == "https" else 80))
+        ips = await resolver(u.hostname, puerto or (443 if u.scheme == "https" else 80))
     except OSError as exc:
         raise ErrorTecnico(f"remoto: no resuelve {u.hostname}: {exc}") from exc
     if not ips:

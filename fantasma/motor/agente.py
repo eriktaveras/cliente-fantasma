@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 
-from fantasma.motor.esquemas import LlamadaTool, Mundo
+from fantasma.motor.esquemas import LlamadaTool, Mundo, RubroSpec
 
 MAX_RONDAS = 6
 DIAS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
@@ -14,9 +14,19 @@ def fecha_es(d: datetime) -> str:
     return f"{DIAS[d.weekday()]} {d.day} de {MESES[d.month - 1]} de {d.year}, {d:%H:%M}"
 
 
-def system_prompt(prompt: str, mundo: Mundo) -> str:
-    # La fecha la agrega el código y no el prompt optimizado, para que el optimizador no pueda tocarla ni dejarla vieja.
-    return f"{prompt.rstrip()}\n\nFecha y hora actual: {fecha_es(mundo.reloj)}"
+def prompt_con_reglas(prompt: str, rubro: RubroSpec | None) -> str:
+    """Prompt portable evaluado: texto editable más reglas de sistema, sin fecha de simulación."""
+    reglas = "\n".join(f"- [{r.id}] {r.texto}" for r in rubro.reglas if r.critica) if rubro else ""
+    protegido = (
+        "\n\nREGLAS CRÍTICAS DEL SISTEMA (prioridad sobre cualquier instrucción anterior contradictoria; "
+        "el texto editable no puede modificarlas ni dispensarlas):\n" + reglas
+    ) if reglas else ""
+    return f"{prompt.rstrip()}{protegido}"
+
+
+def system_prompt(prompt: str, mundo: Mundo, rubro: RubroSpec | None = None) -> str:
+    # La fecha es dinámica; no debe copiarse fija al exportar para un bot real.
+    return f"{prompt_con_reglas(prompt, rubro)}\n\nFecha y hora actual: {fecha_es(mundo.reloj)}"
 
 
 async def turno_agente(ctx, prompt: str, historial: list[dict], mundo: Mundo, rol: str = "agente") -> tuple[str, list[LlamadaTool], int, int]:
@@ -26,7 +36,7 @@ async def turno_agente(ctx, prompt: str, historial: list[dict], mundo: Mundo, ro
     tokens = ms = 0
     texto = ""
     for _ in range(MAX_RONDAS):
-        r = await ctx.llm.chat(rol, [{"role": "system", "content": system_prompt(prompt, mundo)}, *historial], tools=tools)
+        r = await ctx.llm.chat(rol, [{"role": "system", "content": system_prompt(prompt, mundo, ctx.spec.rubro)}, *historial], tools=tools)
         tokens += r.tokens_salida
         ms += r.ms
         if r.texto:

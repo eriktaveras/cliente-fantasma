@@ -693,3 +693,4 @@ mark.burbuja__texto { background: transparent; color: var(--tinta); }
 }
 
 .como .subtitulo { margin-bottom: 6px; }
+ .veredicto--incompleta { color: #895f15; }

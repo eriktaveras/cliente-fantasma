@@ -8,7 +8,5 @@
 runs
 runs-init.log
 config.yaml
-tests
 docs
-deploy
 *.md

@@ -26,7 +26,7 @@ Tu trabajo:
 4. Devuelve el prompt COMPLETO nuevo (no un diff), igual al actual salvo por tu cambio.
 
 Restricciones:
-- No quites ni debilites las reglas críticas.
+- No quites ni debilites las reglas críticas. El runtime las añade como bloque de sistema protegido, fuera del texto editable. No puedes anularlas ni crear excepciones.
 - No repitas cambios ya rechazados o revertidos del historial.
 - No menciones nombres, frases, cifras ni datos concretos de las conversaciones de ejemplo: el prompt debe generalizar.
 - El prompt nuevo no puede pasar de {max_tokens} tokens (unos {max_chars} caracteres).
@@ -127,6 +127,8 @@ def validar_propuesta(p: Propuesta, prompt_actual: str, spec: Spec, max_tokens: 
         if nuevos_5 & _ngramas(fuente):
             return f"filtra datos del caso {caso.id}"
 
+    # Filtro de continuidad textual, NO prueba semántica de ausencia de contradicciones.
+    # La autoridad del bloque crítico se mantiene en agente.system_prompt y se evalúa por casos.
     vocab_nuevo, vocab_actual = set(nuevo), set(actual)
     for regla in spec.rubro.reglas:
         if regla.critica and _presente(regla.texto, vocab_actual) and not _presente(regla.texto, vocab_nuevo):

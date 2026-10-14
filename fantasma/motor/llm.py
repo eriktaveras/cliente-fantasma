@@ -4,6 +4,8 @@ import asyncio
 import json
 import random
 import time
+import weakref
+from contextlib import asynccontextmanager
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
@@ -15,6 +17,28 @@ from pydantic import BaseModel, ValidationError
 from fantasma.motor.config import Config, RolNombre
 
 T = TypeVar("T", bound=BaseModel)
+
+
+# Compartido por todos los LLM/servicios del proceso; por bucle evita semáforos
+# ligados a un asyncio.run anterior en pruebas y herramientas CLI.
+_cupos = weakref.WeakKeyDictionary()
+
+
+@asynccontextmanager
+async def cupo_global(limite: int):
+    loop = asyncio.get_running_loop()
+    estado = _cupos.setdefault(loop, {"condicion": asyncio.Condition(), "activos": 0, "limite": limite})
+    estado["limite"] = min(estado["limite"], limite)
+    condicion = estado["condicion"]
+    async with condicion:
+        await condicion.wait_for(lambda: estado["activos"] < estado["limite"])
+        estado["activos"] += 1
+    try:
+        yield
+    finally:
+        async with condicion:
+            estado["activos"] -= 1
+            condicion.notify_all()
 
 
 class ErrorTecnico(Exception):
@@ -51,6 +75,29 @@ class LLM:
     _clientes: dict[str, AsyncOpenAI] = field(default_factory=dict)
     uso: dict[str, Uso] = field(default_factory=lambda: defaultdict(Uso))
 
+    _control_presupuesto: Any = field(default=None, repr=False)
+
+    async def _pedir(self, rol: RolNombre, kwargs: dict):
+        from fantasma.costos import tarifa
+        # También el uso directo/CLI falla antes de llamar con modelo sin precio.
+        entrada, salida = tarifa(self.config, rol)
+        async with cupo_global(self.config.concurrency_global):
+            control = self._control_presupuesto
+            reserva = control.reservar(rol, kwargs) if control else 0.0
+            gasto = None
+            try:
+                c = await self._cliente(rol).chat.completions.create(**kwargs)
+                u = self.uso[rol]
+                u.llamadas += 1
+                if c.usage:
+                    u.tokens_entrada += c.usage.prompt_tokens
+                    u.tokens_salida += c.usage.completion_tokens
+                    gasto = (c.usage.prompt_tokens * entrada + c.usage.completion_tokens * salida) / 1_000_000
+                return c
+            finally:
+                if control:
+                    control.liquidar(reserva, gasto)
+
     def _cliente(self, rol: RolNombre) -> AsyncOpenAI:
         nombre = self.config.roles[rol].proveedor
         if nombre not in self._clientes:
@@ -84,7 +131,7 @@ class LLM:
         for intento in range(self.config.reintentos):
             t0 = time.monotonic()
             try:
-                c = await self._cliente(rol).chat.completions.create(**kwargs)
+                c = await self._pedir(rol, kwargs)
             except (openai.APIConnectionError, openai.APITimeoutError, openai.RateLimitError, openai.InternalServerError) as exc:
                 ultimo = exc
                 await asyncio.sleep(min(60, 2**intento + random.random()))
@@ -92,9 +139,6 @@ class LLM:
             ms = int((time.monotonic() - t0) * 1000)
             msg = c.choices[0].message
             u = self.uso[rol]
-            u.llamadas += 1
-            u.tokens_entrada += c.usage.prompt_tokens if c.usage else 0
-            u.tokens_salida += c.usage.completion_tokens if c.usage else 0
             u.ms += ms
             llamadas = [LlamadaPedida(tc.id, tc.function.name, tc.function.arguments or "{}") for tc in (msg.tool_calls or [])]
             return Respuesta((msg.content or "").strip(), llamadas, c.usage.prompt_tokens if c.usage else 0, c.usage.completion_tokens if c.usage else 0, ms)

@@ -14,6 +14,7 @@ roles:
   ficha:       {proveedor: nebius, modelo: nvidia/Nemotron-3-Ultra-550b-a55b,     temperatura: 0.0, razonamiento: true,  max_tokens: 12000}
 
 concurrency: 8
+concurrency_global: 8
 repetitions_per_case: 1
 max_turns: 8
 timeout_s: 90

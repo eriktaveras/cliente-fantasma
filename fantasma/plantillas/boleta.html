@@ -35,7 +35,7 @@
     <div class="isla nota">
       <div class="isla__bloque nota__bloque">
         <p class="rotulo">{{ t.nota }}</p>
-        <p class="nota__cifra nota__cifra--{{ tono(boleta.mejor.nota) }}">{{ boleta.mejor.nota }}<span class="nota__de">/100</span></p>
+        <p class="nota__cifra nota__cifra--{{ 'ambar' if ver == 'incompleta' else tono(boleta.mejor.nota) }}">{{ boleta.mejor.nota }}<span class="nota__de">/100</span></p>
         {% if mejoro %}
         <p class="nota__antes"><span class="dato">{{ t["antes" ~ sfx] }}</span> <strong>{{ boleta.inicial.nota }}</strong> <span aria-hidden="true">→</span> <span class="dato">{{ t["despues" ~ sfx] }}</span> <strong>{{ boleta.mejor.nota }}</strong></p>
         {% endif %}
@@ -48,6 +48,21 @@
     </div>
   </div>
 </section>
+
+{% if boleta.mejor.cobertura %}
+{% set c = boleta.mejor.cobertura %}
+<section class="envoltura seccion" aria-labelledby="h-cobertura">
+  <h2 class="titular-seccion" id="h-cobertura">{{ t.cobertura_titulo }}</h2>
+  {% if not c.completa %}<p class="aviso aviso--ambar" role="status">{{ t.cobertura_pista }}</p>{% endif %}
+  <dl class="cifras espaciado-arriba">
+    <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.cobertura_solicitados }}</dt><dd class="cifras__valor">{{ c.casos_solicitados }}</dd></div>
+    <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.cobertura_generados }}</dt><dd class="cifras__valor">{{ c.casos_generados }}</dd></div>
+    <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.cobertura_completos }}</dt><dd class="cifras__valor">{{ c.casos_completos }}/{{ c.casos_solicitados }}</dd></div>
+    <div class="cifras__celda"><dt class="cifras__etiqueta">{{ t.cobertura_repeticiones }}</dt><dd class="cifras__valor">{{ c.repeticiones_evaluadas }}/{{ c.repeticiones_solicitadas }}</dd></div>
+  </dl>
+  {% if c.criticos_faltantes %}<p class="aviso aviso--ambar espaciado-arriba">{{ t.cobertura_criticos }}: {{ c.criticos_faltantes | length }}</p>{% endif %}
+</section>
+{% endif %}
 
 <section class="envoltura seccion" aria-labelledby="h-fallas">
   <p class="rotulo rotulo--verde">{{ t.fallas_rotulo }}</p>

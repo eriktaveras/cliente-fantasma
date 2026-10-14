@@ -93,6 +93,7 @@ def test_veredicto(nota, criticas, casos, esperado):
 
 
 def test_nota_promedia_por_caso_y_cuenta_criticas(store, rubrica):
+    (store.dir / "config.yaml").write_text("repetitions_per_case: 2\n")
     guardar(store, conversacion("a", "b"), evaluacion("busqueda-normal", 1.0, j=juez(rubrica, {})))
     guardar(store, conversacion("a", "b", rep=1), evaluacion("busqueda-normal", 0.5, rep=1, j=juez(rubrica, {})))
     guardar(store, conversacion("a", "b", caso_id="discriminatoria"), evaluacion("discriminatoria", 0.0, critica=True, j=juez(rubrica, {"veracidad": 1}, "x")))
@@ -153,7 +154,8 @@ def test_armar_y_exportar(store, rubrica, tmp_path):
         boleta.armar(store, run_id="r", modo="generado", estado="terminada", costo_usd=0.1, modelos={})
     guardar(store, conversacion("hola", "Hola"), evaluacion("busqueda-normal", 0.9, j=juez(rubrica, {})))
     b = boleta.armar(store, run_id="r", modo="generado", estado="terminada", costo_usd=0.12345, modelos={"agente": "nano"})
-    assert b.inicial.nota == 90 and b.veredicto == "listo" and b.veredicto_texto == "Listo para atender"
+    assert b.inicial.nota == 90 and b.veredicto == "incompleta" and b.veredicto_texto == "Evaluación incompleta"
+    assert b.mejor.cobertura.casos_evaluados == 1 and not b.mejor.cobertura.completa
     assert b.fallas == [] and b.costo_usd == 0.1235 and b.parche.tipo == "ninguno"
 
     ruta = boleta.exportar_jsonl(store, tmp_path / "x" / "c.jsonl")

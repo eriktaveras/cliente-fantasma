@@ -11,9 +11,13 @@ from pathlib import Path
 from statistics import mean
 from typing import Literal
 
+import yaml
+
 from pydantic import BaseModel
 
-from fantasma.motor.esquemas import Caso, EvaluacionRep, Spec, Transcripcion, Verificacion, VersionPrompt
+from fantasma.motor.agente import prompt_con_reglas
+from fantasma.motor.esquemas import Caso, Cobertura, EvaluacionRep, Spec, Transcripcion, Verificacion, VersionPrompt
+from fantasma.motor.evaluar import cobertura
 from fantasma.motor.storage import Store
 from fantasma.motor.verificar import montos
 
@@ -24,9 +28,10 @@ FRACCION_CRITICAS = 0.15
 PEORES = 3
 SUGERENCIA = "sugerencia.json"
 
-Veredicto = Literal["listo", "ajustes", "no_lo_sueltes"]
+Veredicto = Literal["listo", "ajustes", "no_lo_sueltes", "incompleta"]
 TEXTO_VEREDICTO: dict[str, str] = {
     "listo": "Listo para atender",
+    "incompleta": "Evaluación incompleta",
     "ajustes": "Necesita ajustes",
     "no_lo_sueltes": "No lo sueltes",
 }
@@ -53,6 +58,7 @@ class NotaVersion(BaseModel):
     casos: int
     pasan: int
     criticas: int
+    cobertura: Cobertura | None = None
 
 
 class NotaCriterio(BaseModel):
@@ -121,17 +127,27 @@ def _por_caso(evals: list[EvaluacionRep]) -> dict[str, list[EvaluacionRep]]:
 
 def nota_version(store: Store, v: int) -> NotaVersion:
     """Sobre todas las conversaciones evaluadas de la versión (train y holdout): promedio por caso y luego entre casos."""
-    por_caso = _por_caso(store.evaluaciones(v))
+    spec = store.cargar_spec()
+    config_path = store.dir / "config.yaml"
+    config = yaml.safe_load(config_path.read_text()) or {} if config_path.exists() else {}
+    reps = int(config.get("repetitions_per_case", 1))
+    solicitados = int(config.get("casos", {}).get("cantidad", len(spec.casos)))
+    # Las repeticiones adicionales para medir ruido no forman parte de la nota de validación.
+    evals = [e for e in store.evaluaciones(v) if 0 <= e.repeticion < reps and any(c.id == e.caso_id for c in spec.casos)]
+    por_caso = _por_caso(evals)
     return NotaVersion(
         version=v,
         nota=round(100 * mean(mean(e.puntaje for e in es) for es in por_caso.values())) if por_caso else 0,
         casos=len(por_caso),
         pasan=sum(all(e.paso for e in es) for es in por_caso.values()),
         criticas=sum(any(e.critica for e in es) for es in por_caso.values()),
+        cobertura=cobertura(spec.casos, evals, reps, solicitados),
     )
 
 
 def veredicto(n: NotaVersion) -> Veredicto:
+    if n.cobertura is not None and not n.cobertura.completa:
+        return "incompleta"
     if n.nota < NO_LO_SUELTES or n.criticas >= max(2, round(n.casos * FRACCION_CRITICAS)):
         return "no_lo_sueltes"
     if n.nota >= LISTO and n.criticas == 0:
@@ -319,19 +335,22 @@ def parche(store: Store, modo: str, mejor: int) -> Parche:
         if not ruta.exists():
             return Parche(tipo="ninguno")
         return Parche(tipo="sugerencia", **json.loads(ruta.read_text()))
+    rubro = store.cargar_spec().rubro
+    base = prompt_con_reglas(store.texto(0), rubro)
     if mejor == 0:
         # Sin versión aceptada (en la ligera hay una sola ronda), la última propuesta queda como sugerencia sin validar.
         propuestas = [v for v in store.versiones() if v.n > 0 and (store.dir / "prompts" / f"v{v.n:03d}.md").exists()]
         if not propuestas:
-            return Parche(tipo="ninguno", texto=store.texto(0))
+            return Parche(tipo="ninguno", texto=base)
         v = propuestas[-1]
-        texto = store.texto(v.n)
+        texto = prompt_con_reglas(store.texto(v.n), rubro)
         # `motivo` sale como "no se aceptó": el de una aceptada que se cortó antes del holdout diría "mejora +0.150".
         # Para esa basta la pista de sugerencia sin validar.
         motivo = v.motivo if v.estado in ("rechazada", "revertida") else ""
-        return Parche(tipo="sugerencia", cambio=v.cambio or "", hipotesis=v.hipotesis or "", texto=texto, diff=diff(store.texto(0), texto), motivo=motivo)
+        return Parche(tipo="sugerencia", cambio=v.cambio or "", hipotesis=v.hipotesis or "", texto=texto, diff=diff(base, texto), motivo=motivo)
     v = store.version(mejor)
-    return Parche(tipo="prompt_final", cambio=v.cambio or "", hipotesis=v.hipotesis or "", texto=store.texto(mejor), diff=diff(store.texto(0), store.texto(mejor)))
+    texto = prompt_con_reglas(store.texto(mejor), rubro)
+    return Parche(tipo="prompt_final", cambio=v.cambio or "", hipotesis=v.hipotesis or "", texto=texto, diff=diff(base, texto))
 
 
 # ---------------------------------------------------------------- armado y exportación
@@ -343,12 +362,12 @@ def armar(store: Store, *, run_id: str, modo: str, estado: str, costo_usd: float
         raise ValueError(f"La corrida {run_id} no tiene conversaciones evaluadas todavía")
     v_mejor = 0 if modo == "remoto" else mejor_version(store.versiones())
     inicial, mejor = nota_version(store, 0), nota_version(store, v_mejor)
-    clave = veredicto(mejor)
+    clave = veredicto(mejor) if estado == "terminada" else "incompleta"
     return Boleta(
         run_id=run_id,
         negocio=spec.rubro.negocio,
         modo=modo,
-        estado=estado,
+        estado="incompleta" if clave == "incompleta" else estado,
         inicial=inicial,
         mejor=mejor,
         veredicto=clave,

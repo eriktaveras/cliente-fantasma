@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS base
 COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /usr/local/bin/uv
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
@@ -11,10 +11,18 @@ COPY rubros ./rubros
 COPY config.example.yaml ./config.yaml
 RUN uv sync --frozen --no-dev
 
+FROM base AS test
+RUN uv sync --frozen --group dev
+COPY tests ./tests
+COPY deploy ./deploy
+CMD ["/app/.venv/bin/python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
+
+FROM base AS runtime
+
 # runs/ es un bind mount del host: con el uid del dueño del directorio (1000 en el Beelink) el contenedor puede escribir sin root.
 ARG UID=1000
 RUN useradd --create-home --uid ${UID} fantasma && mkdir -p /app/runs && chown -R fantasma:fantasma /app/runs
 USER fantasma
 ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
-CMD ["uvicorn", "fantasma.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
+CMD ["uvicorn", "fantasma.app:app", "--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers"]

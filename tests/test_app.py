@@ -91,9 +91,10 @@ def test_conector_n8n_se_descarga(cliente):
     assert json.loads(r.content)["nodes"]
 
 
-def test_como_funciona_nombra_los_nemotron(cliente):
+def test_como_funciona_muestra_configuracion_activa(cliente):
     html = cliente.get("/como-funciona").text
-    assert "Token Factory" in html and "X-Cliente-Fantasma: true" in html
+    assert "Proveedores activos: local" in html and "X-Cliente-Fantasma: true" in html
+    assert "falso" in html and "Todo corre en NVIDIA Nemotron" not in html
 
 
 def test_idioma_por_accept_language_y_selector(cliente):
@@ -259,10 +260,10 @@ def test_limite_por_dia_responde_429(cliente, servicio):
     assert r.status_code == 429 and "máximo de 1 pruebas" in r.text
 
 
-def test_ip_de_cloudflare(cliente, servicio):
+def test_ip_de_cloudflare_no_se_confia_sin_proxy_autorizado(cliente, servicio):
     r = cliente.post("/probar", data={"texto": COLMADO}, headers={"cf-connecting-ip": "203.0.113.9"}, follow_redirects=False)
     run_id = r.headers["location"].split("/")[2]
-    assert servicio.indice.obtener(run_id).ip_hash == servicio.hash_ip("203.0.113.9")
+    assert servicio.indice.obtener(run_id).ip_hash == servicio.hash_ip("testclient")
 
 
 def test_todo_se_escapa(cliente, servicio):

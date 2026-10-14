@@ -8,6 +8,7 @@ import time
 from collections import defaultdict
 from collections.abc import Callable
 
+from fantasma.motor.agente import prompt_con_reglas
 from fantasma.motor.config import Config
 from fantasma.motor.esquemas import Agregado, Caso, Corrida, ResultadoCaso, VersionPrompt
 from fantasma.motor.evaluar import agregar, consolidar, evaluar_conjunto, evaluar_rep, reunir
@@ -28,6 +29,22 @@ def aceptar(
     criticos: set[str],
     tolerados: int = 0,
 ) -> tuple[bool, str]:
+    if any(a.cobertura is not None and not a.cobertura.completa for a in (actual_ag, cand_ag)):
+        return False, "evaluación incompleta: no se pueden comparar las versiones"
+    actuales = {r.caso_id: r for r in actual_res}
+    candidatos = {r.caso_id: r for r in cand_res}
+    if not actuales or actuales.keys() != candidatos.keys():
+        return False, "cobertura distinta: faltan casos en la comparación"
+    if not criticos.issubset(candidatos):
+        return False, "cobertura incompleta de casos críticos"
+    for id_, r in actuales.items():
+        c = candidatos[id_]
+        if not r.completo or not c.completo:
+            return False, f"evaluación incompleta: {id_}"
+        if (r.repeticiones or c.repeticiones) and r.repeticiones != c.repeticiones:
+            return False, f"repeticiones distintas: {id_}"
+        if len(r.puntajes) != len(c.puntajes):
+            return False, f"repeticiones distintas: {id_}"
     pasaban = {r.caso_id for r in actual_res if r.paso and r.caso_id in criticos}
     rotos = sorted(r.caso_id for r in cand_res if r.caso_id in pasaban and not r.paso)
     delta = cand_ag.puntaje - actual_ag.puntaje
@@ -43,7 +60,9 @@ def debe_parar(corrida: Corrida, actual: VersionPrompt, mejor: VersionPrompt, co
     metas, pres = config.metas, config.presupuesto
     for v in (actual, mejor):
         if (
-            v.train is not None
+            v.cobertura_train is True
+            and v.cobertura_holdout is True
+            and v.train is not None
             and v.train >= metas.target_train_score
             and v.criticos_ok
             and v.holdout is not None
@@ -68,7 +87,7 @@ def banco_corto(casos: list[Caso], resultados: list[ResultadoCaso], tam: int) ->
 
 
 def mejor_por_holdout(versiones: list[VersionPrompt]) -> VersionPrompt:
-    candidatas = [v for v in versiones if v.estado in ("base", "aceptada") and v.holdout is not None]
+    candidatas = [v for v in versiones if v.estado in ("base", "aceptada") and v.holdout is not None and v.cobertura_holdout is not False]
     return max(candidatas, key=lambda v: (v.holdout, v.train or 0.0, v.n))
 
 
@@ -116,15 +135,30 @@ async def correr(ctx, progreso: Progreso | None = None) -> Corrida:
 
     async def medir(v: VersionPrompt, casos: list[Caso], conjunto: str, n_reps: int) -> tuple[Agregado, list[ResultadoCaso]]:
         guardado = store.agregado(v.n, conjunto)
-        if guardado is not None and conjunto != "corto":
+        if (
+            guardado is not None
+            and guardado.cobertura is not None
+            and guardado.cobertura.completa
+            and guardado.cobertura.repeticiones_solicitadas == len(casos) * n_reps
+            and {r.caso_id for r in store.resultados(v.n, conjunto)} == {c.id for c in casos}
+            and all(r.repeticiones == list(range(n_reps)) for r in store.resultados(v.n, conjunto))
+            and conjunto != "corto"
+        ):
+            if conjunto == "train":
+                v.train, v.criticos_ok, v.cobertura_train = guardado.puntaje, guardado.criticos_ok, True
+            else:
+                v.holdout, v.cobertura_holdout = guardado.puntaje, True
+            store.guardar_version(v)
             return guardado, store.resultados(v.n, conjunto)
         ag, res = await evaluar_conjunto(ctx, casos, store.texto(v.n), v.n, conjunto, n_reps, progreso=avisar)
         store.guardar_agregado(ag)
         store.guardar_resultados(conjunto, res)
         if conjunto == "train":
             v.train, v.criticos_ok = ag.puntaje, ag.criticos_ok
+            v.cobertura_train = ag.cobertura.completa if ag.cobertura else all(r.completo and len(r.puntajes) == n_reps for r in res) and len(res) == len(casos)
         elif conjunto == "holdout":
             v.holdout = ag.puntaje
+            v.cobertura_holdout = ag.cobertura.completa if ag.cobertura else all(r.completo and len(r.puntajes) == n_reps for r in res) and len(res) == len(casos)
         else:
             return ag, res
         store.guardar_version(v)
@@ -136,6 +170,12 @@ async def correr(ctx, progreso: Progreso | None = None) -> Corrida:
     avisar("línea base: v000")
     base_ag, _ = await medir(base, train, "train", reps)
     await medir(base, holdout, "holdout", reps)
+    if not base.cobertura_train or not base.cobertura_holdout:
+        corrida.estado = "error"
+        corrida.motivo_parada = "evaluación incompleta: faltan casos o repeticiones válidas en la línea base"
+        guardar_corrida()
+        avisar(corrida.motivo_parada)
+        return corrida
     if corrida.min_improvement is None:
         ruido = await _ruido(ctx, train, store.texto(0), reps, base_ag.puntaje) if opt.medir_ruido else 0.0
         corrida.min_improvement = max(opt.min_improvement, ruido)
@@ -146,6 +186,19 @@ async def correr(ctx, progreso: Progreso | None = None) -> Corrida:
         versiones = store.versiones()
         actual = store.version(version_actual(versiones))
         mejor = mejor_por_holdout(versiones)
+        revalidar = {v.n: v for v in (actual, mejor)}
+        invalida = False
+        for v in revalidar.values():
+            if v.cobertura_train is None and v.train is not None:
+                await medir(v, train, "train", reps)
+            if v.cobertura_holdout is None and v.holdout is not None:
+                await medir(v, holdout, "holdout", reps)
+            if v.n > 0 and (v.cobertura_train is False or v.cobertura_holdout is False):
+                v.estado, v.motivo = "revertida", "evaluación histórica incompleta: falta validar cobertura"
+                store.guardar_version(v)
+                invalida = True
+        if invalida:
+            continue
         corrida.iteracion = sum(v.estado in ("aceptada", "rechazada", "revertida") for v in versiones)
         corrida.mejor_version = mejor.n
         motivo = debe_parar(corrida, actual, mejor, cfg, horas(), sin_mejora(versiones))
@@ -176,6 +229,9 @@ async def correr(ctx, progreso: Progreso | None = None) -> Corrida:
         corto_act, _ = await medir(actual, banco, "corto", 1)
         corto_cand, _ = await medir(cand, banco, "corto", 1)
         cand.corto = corto_cand.puntaje
+        if any(a.cobertura is not None and not a.cobertura.completa for a in (corto_act, corto_cand)):
+            _rechazar(store, cand, "etapa A: evaluación incompleta")
+            continue
         if corto_cand.puntaje <= corto_act.puntaje:
             _rechazar(store, cand, f"etapa A: {corto_cand.puntaje:.3f} vs {corto_act.puntaje:.3f}")
             avisar(f"v{cand.n:03d} rechazada en etapa A")
@@ -195,6 +251,11 @@ async def correr(ctx, progreso: Progreso | None = None) -> Corrida:
         cerca_de_meta = cand_ag.puntaje >= metas.target_train_score and cand_ag.criticos_ok
         if aceptadas % opt.holdout_cada == 0 or cerca_de_meta:
             await medir(cand, holdout, "holdout", reps)
+            if not cand.cobertura_holdout:
+                cand.estado, cand.motivo = "revertida", "holdout incompleto: no se pudo validar la mejora"
+                store.guardar_version(cand)
+                avisar(f"v{cand.n:03d} revertida: holdout incompleto")
+                continue
             if cand.train > mejor.train and cand.holdout < mejor.holdout - opt.sobreajuste:
                 cand.estado = "revertida"
                 cand.motivo = f"sobreajuste: holdout {cand.holdout:.3f} vs {mejor.holdout:.3f} de v{mejor.n:03d}"
@@ -208,7 +269,7 @@ async def correr(ctx, progreso: Progreso | None = None) -> Corrida:
     if actual.holdout is None:
         await medir(actual, holdout, "holdout", reps)
     mejor = mejor_por_holdout(store.versiones())
-    (store.dir / "final_prompt.md").write_text(store.texto(mejor.n))
+    (store.dir / "final_prompt.md").write_text(prompt_con_reglas(store.texto(mejor.n), spec.rubro))
     corrida.mejor_version = mejor.n
     corrida.estado = motivo
     corrida.motivo_parada = motivo

@@ -21,6 +21,7 @@ for _nombre, _attrs in {
 from fantasma.motor import loop, optimizador
 from fantasma.motor.esquemas import Agregado, Caso, Corrida, EvaluacionRep, Persona, Propuesta, ResultadoCaso, VersionPrompt
 from fantasma.motor.loop import aceptar, banco_corto, debe_parar
+from fantasma.motor.agente import prompt_con_reglas
 from fantasma.motor.optimizador import validar_propuesta
 from fantasma.motor.storage import Store
 
@@ -39,7 +40,8 @@ def res(caso_id: str, paso: bool, puntaje: float = 0.8, version: int = 0) -> Res
 
 
 def test_aceptar_sube_poco():
-    ok, motivo = aceptar(ag(0.70), ag(0.71), [], [], 0.02, set())
+    resultados = [res("a", True)]
+    ok, motivo = aceptar(ag(0.70), ag(0.71), resultados, resultados, 0.02, set())
     assert not ok and "mejora" in motivo
 
 
@@ -76,7 +78,7 @@ def cfg_parada(config):
 
 
 def v(n=0, train=0.5, holdout=0.5, criticos_ok=True, estado="aceptada") -> VersionPrompt:
-    return VersionPrompt(n=n, train=train, holdout=holdout, criticos_ok=criticos_ok, estado=estado)
+    return VersionPrompt(n=n, train=train, holdout=holdout, criticos_ok=criticos_ok, cobertura_train=True, cobertura_holdout=holdout is not None, estado=estado)
 
 
 def test_debe_parar_sigue(cfg_parada):
@@ -264,7 +266,7 @@ async def test_loop_acepta_rechaza_y_para_por_meseta(monkeypatch, entorno):
     assert corrida.iteracion == 3
     assert corrida.mejor_version == 1
     assert corrida.min_improvement == pytest.approx(0.02)
-    assert (store.dir / "final_prompt.md").read_text() == prompt(1)
+    assert (store.dir / "final_prompt.md").read_text() == prompt_con_reglas(prompt(1), ctx.spec.rubro)
     assert store.corrida().estado == "meseta"
     assert store.version(1).holdout == pytest.approx(0.60)
     # la tercera propuesta parte de v001 y ve el rechazo anotado
@@ -286,7 +288,7 @@ async def test_loop_rechaza_en_etapa_b_por_mejora_insuficiente(monkeypatch, ento
     assert v1.estado == "rechazada" and v1.motivo.startswith("etapa B: mejora +0.010")
     assert v2.estado == "rechazada"
     assert corrida.estado == "meseta" and corrida.mejor_version == 0
-    assert (ctx.store.dir / "final_prompt.md").read_text() == ctx.spec.prompt_base
+    assert (ctx.store.dir / "final_prompt.md").read_text() == prompt_con_reglas(ctx.spec.prompt_base, ctx.spec.rubro)
 
 
 async def test_loop_revierte_por_sobreajuste(monkeypatch, entorno):

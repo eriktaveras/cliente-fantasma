@@ -298,6 +298,21 @@ class ResultadoCaso(BaseModel):
     paso: bool
     inestable: bool
     fallos: list[str] = []
+    repeticiones: list[int] = []
+    completo: bool = True
+
+
+class Cobertura(BaseModel):
+    casos_solicitados: int
+    casos_generados: int
+    casos_evaluados: int
+    casos_completos: int
+    casos_excluidos: int
+    repeticiones_solicitadas: int
+    repeticiones_evaluadas: int
+    repeticiones_excluidas: int
+    criticos_faltantes: list[str] = []
+    completa: bool
 
 
 class Agregado(BaseModel):
@@ -312,10 +327,11 @@ class Agregado(BaseModel):
     criticos_pasan: int
     inestables: int
     por_criterio: dict[str, float] = {}
+    cobertura: Cobertura | None = None
 
     @property
     def criticos_ok(self) -> bool:
-        return self.criticos_pasan == self.criticos_total
+        return self.criticos_pasan == self.criticos_total and (self.cobertura is None or self.cobertura.completa)
 
 
 # ---------------------------------------------------------------- optimización
@@ -337,6 +353,8 @@ class VersionPrompt(BaseModel):
     train: float | None = None
     holdout: float | None = None
     criticos_ok: bool = False
+    cobertura_train: bool | None = None
+    cobertura_holdout: bool | None = None
     estado: Literal["base", "candidata", "aceptada", "rechazada", "revertida"] = "candidata"
     motivo: str = ""
     creada: datetime = Field(default_factory=datetime.now)

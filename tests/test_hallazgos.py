@@ -5,6 +5,8 @@ import asyncio
 import httpx
 import pytest
 
+from fantasma import costos
+
 from fantasma import boleta, remoto
 from fantasma.ficha import Politicas, a_datos
 from fantasma.motor.contexto import Contexto
@@ -230,7 +232,7 @@ def test_tope_de_gasto_por_visitante(servicio):
 
     run_id, estado = correr(flujo())
     assert estado == "presupuesto" and "por visitante" in servicio.indice.obtener(run_id).motivo
-    with pytest.raises(Limite, match="por visitante"):
+    with pytest.raises(costos.PresupuestoAgotado, match="por visitante"):
         correr(servicio.crear_ficha([], COLMADO, "1.2.3.4"))
     correr(servicio.crear_ficha([], COLMADO, "5.6.7.8"))
 

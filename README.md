@@ -92,9 +92,9 @@ Two layers:
 
 Verdict: **Ready** at 85+ with no critical failures; **Don't ship it** under 60 or with critical failures in max(2, 15%) of the cases; **Needs fixes** otherwise.
 
-## Models: every role is NVIDIA Nemotron on Nebius Token Factory
+## Models: default hackathon configuration
 
-All inference goes through the OpenAI-compatible endpoint `https://api.tokenfactory.nebius.com/v1`.
+The supplied configuration uses the OpenAI-compatible endpoint `https://api.tokenfactory.nebius.com/v1`. Deployments may select other providers and models. `/como-funciona` lists the active configuration; historical measurements below describe the hackathon configuration, not every deployment.
 
 | Role | Model | Reasoning | Why |
 |---|---|---|---|
@@ -152,7 +152,9 @@ Measured on Nebius Token Factory with a Dominican *colmado* (corner store) as th
 
 Breakdown of the latest measured light run with the generated bot (US$0.52, 3.6 min, 26 conversations): card 0.009 · case generator 0.053 · ghosts 0.212 · bot (Nano) 0.050 · judge 0.170 · optimizer 0.026. The bot is 10% of the cost: what you pay for is the synthetic customers and the judge, which is exactly where the big model earns its place.
 
-The budget is enforced while the run is in flight: when a run hits its cap it is cancelled cleanly and the report card is built from what was measured (tested for real: it went over by only US$0.009 of in-flight calls). The public demo also has a global daily cap (`TOPE_DIARIO_USD`, default US$10), a per-visitor daily cap (`TOPE_IP_USD`, default US$4; IPv6 visitors count per /64), 1 active run per visitor and 5 runs per visitor per day. Tavily lookups are charged against those caps at an estimated `TAVILY_USD_FICHA` (default US$0.02) per card.
+Before every model request, including profile creation and retries, the service reserves a conservative input/output allowance against run, daily and visitor budgets. Requests without confirmed token usage are accounted conservatively at their reserved amount. Reports keep observed scores but cannot approve incomplete coverage. The demo also has a global daily cap (`TOPE_DIARIO_USD`, default US$10), a visitor daily cap (`TOPE_IP_USD`, default US$4; IPv6 counts per /64), one active run per visitor and `CORRIDAS_POR_DIA` (default 5). Daily accounting uses the spending date, including profiles created on earlier days. Tavily remains an estimate (`TAVILY_USD_FICHA`, default US$0.02), not a guarantee of its final invoice.
+
+Unknown model prices fail before a request. A provider can declare `precios: {model-name: [input_usd_per_million, output_usd_per_million]}`; `[0, 0]` explicitly declares a free local model. `local: true` controls API compatibility and does not imply free inference. `concurrency_global` limits simultaneous model requests across runs in the single application process.
 
 That light run scored the colmado's bot **25/100, "Don't ship it"**: 11 of 15 ghosts produced a critical failure, mostly invented prices and products, each one shown with the exact message where it happened. The optimizer's v001 scored worse on train (0.26 → 0.18) and was rejected, so before and after are the same: the report says so instead of faking an improvement. A webhook bot that lies on purpose (rice at RD$380 instead of RD$420, "free delivery") scored **0/100**, with those exact lies quoted as its 3 worst failures.
 
@@ -197,13 +199,28 @@ docker compose up -d --build     # serves on 127.0.0.1:${HTTP_PORT:-8134}, runs/
 
 The public demo runs on a home server behind a Cloudflare Tunnel (`deploy/add-tunnel.sh`).
 
+Set `FANTASMA_CONFIG=config.local.yaml` in `.env` to mount a private local configuration instead of the example. Keep credentials in environment variables; private configurations, `.env` backups and local Compose overrides are ignored by Git. Set `FANTASMA_URL_PUBLICA=https://your-host` for canonical share links and HTTPS cookies behind the tunnel. `FANTASMA_CLAVE` protects private routes; unguessable report links remain read-only and public, including their referenced static assets. Shared report content is accessible to anyone holding its token.
+
+Proxy headers are ignored by default. Configure `FANTASMA_PROXY_CIDRS` only for exclusive trusted proxy peers. Do not trust the Docker bridge when a LAN relay or other clients can reach the app through the same peer: leave it empty (visitors then share the gateway quota) or isolate those ingress paths first. Uvicorn does not rewrite the socket peer from forwarded headers. Run a single worker; events, task ownership and restart recovery are process-local.
+
+Compose caps memory, CPU, processes and logs, drops capabilities and uses a read-only root filesystem. Before replacing the image, retain the previous image tag and take a private snapshot while no new requests can write to `runs`:
+
+```bash
+python deploy/respaldo.py backup /absolute/path/runs /absolute/path/backups/pre-update
+python deploy/respaldo.py restore /absolute/path/backups/pre-update /absolute/path/restore-check
+```
+
+Restoration verifies a manifest and SQLite integrity, and refuses to overwrite any existing destination. Restoring production is a separate maintenance action. Protect the signing secret/environment alongside snapshots; losing it invalidates ownership cookies. Old runs are not regraded automatically. Legacy costs are migrated using their recorded creation date because historical spending dates were not stored.
+
 ## Tests
 
 ```bash
 uv run pytest
+docker build --target test -t cliente-fantasma:test .
+docker run --rm --network none cliente-fantasma:test
 ```
 
-310 tests (309 pass offline, 1 skipped): a scripted fake LLM that answers by schema and accounts tokens, Tavily and webhooks mocked with `httpx.MockTransport`. They cover the card (no-invention validation and retries), the ghost axes and their distribution, the SSRF guard (12 internal address families, IP pinning, redirects, size limit), the service (budget cap, daily cap, rate limits, edited card being the one used, interrupted runs) and the report card (quotes, verdict, worst failures, patch). The skipped one is the live test against Nebius; it runs with `FICHA_REAL=1`.
+The offline suite uses scripted models and mocked Tavily/webhooks. Regression cases cover missing cases/repetitions, grounded remote judging, product-price-currency associations, protected critical rules, spending reservations/retries/cancellation/day rollover, request-body limits, proxy trust, public report access, calibration and backup restoration. The optional live Nebius test is skipped unless `FICHA_REAL=1`; normal verification spends no model tokens. The test image runs the suite on the same Python 3.12 base as production.
 
 ## Project layout
 
@@ -233,7 +250,7 @@ n8n/conector.json   n8n template for Bring your bot
 
 Built by **Erik Taveras** ([eriktaveras.com](https://eriktaveras.com)) during the hackathon period (October 2026), on top of *cuna*, his own prompt-optimization engine for sales agents, also written in October 2026. The ghosts, the business card, Bring your bot, the report card and the web app were built for this hackathon.
 
-Inference by NVIDIA Nemotron on Nebius Token Factory. Web research by Tavily.
+Default hackathon inference: NVIDIA Nemotron on Nebius Token Factory. Active deployment models are configurable. Web research by Tavily.
 
 ## License
 

@@ -31,7 +31,7 @@
         <div class="fila"><span class="fila__nombre">{{ t.roles[rol] }}</span><span class="fila__dato modelo">{{ modelos[rol] }}</span></div>
         {% endfor %}
       </div>
-      <p class="isla__pie">Nebius Token Factory · api.tokenfactory.nebius.com</p>
+      <p class="isla__pie">{{ t.como_proveedores }}: {{ proveedores | join(', ') }}</p>
     </div>
     <div class="isla isla--suave">
       <div class="isla__bloque">

@@ -173,10 +173,22 @@ class Servicio:
         run_id = f"{datetime.now():%Y%m%d}-{secrets.token_hex(4)}"
         self.indice.crear(run_id, ip_hash, negocio=nombre)
         self._publicar(run_id, "etapa", etapa="investigando")
-        llm = self.fabrica_llm(self.config_base)
         tavily_key = os.environ.get("TAVILY_API_KEY") or None
         previo = self.tavily_usd if tavily_key and (urls or nombre) else 0.0
+
+        def al_gastar(usd: float) -> None:
+            self.indice.actualizar(run_id, costo_usd=previo + usd)
+            self._publicar(run_id, "costo", usd=round(previo + usd, 4))
+
+        llm = costos.Medido(
+            self.fabrica_llm(self.config_base), al_gastar,
+            reservar=lambda usd: self.indice.reservar(run_id, usd, self.tamaños["ligera"].tope_usd, self.tope_diario, self.tope_ip),
+            liquidar=lambda reserva, gasto: self.indice.liquidar(run_id, reserva, gasto),
+        )
         try:
+            # La investigación externa también consume presupuesto antes de salir.
+            self.indice.reservar(run_id, previo, self.tamaños["ligera"].tope_usd, self.tope_diario, self.tope_ip)
+            self.indice.liquidar(run_id, previo, previo)
             ficha = await investigar(
                 llm,
                 urls=urls,
@@ -185,14 +197,15 @@ class Servicio:
                 nombre=nombre,
                 progreso=lambda m: self._publicar(run_id, "log", texto=m),
             )
-        except Exception as exc:
-            self.indice.actualizar(run_id, estado="error", motivo=str(exc)[:500], costo_usd=previo + costos.total(llm, self.config_base))
+        except BaseException as exc:
+            estado = "presupuesto" if isinstance(exc, costos.PresupuestoAgotado) else "error"
+            self.indice.actualizar(run_id, estado=estado, motivo=str(exc)[:500] or "cancelada", costo_usd=self._fila(run_id).costo_usd)
             self._publicar(run_id, "error", mensaje=str(exc))
             raise
         d = self._dir(run_id)
         d.mkdir(parents=True, exist_ok=True)
         (d / "ficha.json").write_text(ficha.model_dump_json(indent=2))
-        self.indice.actualizar(run_id, estado="ficha", negocio=ficha.negocio, costo_usd=previo + costos.total(llm, self.config_base))
+        self.indice.actualizar(run_id, estado="ficha", negocio=ficha.negocio, costo_usd=previo + llm.gastado())
         self._publicar(run_id, "ficha", ficha=ficha.model_dump(mode="json"))
         return run_id
 
@@ -247,31 +260,23 @@ class Servicio:
 
         tope = self.tamaños[tamaño].tope_usd
         ip_hash = self._fila(run_id).ip_hash
-        tarea = asyncio.current_task()
-        corte: list[str] = []
-        centavos = -1
-
         def al_gastar(usd: float) -> None:
-            nonlocal centavos
-            if int(usd * 100) == centavos:
-                return
-            centavos = int(usd * 100)
             total = costo_previo + usd
             self.indice.actualizar(run_id, costo_usd=total)
             publicar("costo", usd=round(total, 4))
-            if corte:
-                return
+            # Defensa adicional ante respuestas que superen la reserva estimada.
             if total > tope:
-                corte.append(f"tope de la corrida (US${tope:.2f})")
-            elif self.indice.gasto_del_dia() > self.tope_diario:
-                corte.append(f"tope diario de la demo (US${self.tope_diario:.2f})")
-            elif self.indice.gasto_del_dia_de(ip_hash) > self.tope_ip:
-                corte.append(f"tope diario por visitante (US${self.tope_ip:.2f})")
-            if corte:
-                publicar("log", texto=f"se alcanzó el {corte[0]}: se detiene la corrida")
-                tarea.cancel()
+                raise costos.PresupuestoAgotado(f"tope de la corrida (US${tope:.2f})")
+            if self.indice.gasto_del_dia() > self.tope_diario:
+                raise costos.PresupuestoAgotado(f"tope diario de la demo (US${self.tope_diario:.2f})")
+            if self.indice.gasto_del_dia_de(ip_hash) > self.tope_ip:
+                raise costos.PresupuestoAgotado(f"tope diario por visitante (US${self.tope_ip:.2f})")
 
-        llm = costos.Medido(self.fabrica_llm(config), al_gastar)
+        llm = costos.Medido(
+            self.fabrica_llm(config), al_gastar,
+            reservar=lambda usd: self.indice.reservar(run_id, usd, tope, self.tope_diario, self.tope_ip),
+            liquidar=lambda reserva, gasto: self.indice.liquidar(run_id, reserva, gasto),
+        )
         progreso = lambda m: publicar("log", texto=m)
         estado, motivo = "terminada", ""
         try:
@@ -288,19 +293,17 @@ class Servicio:
                 corrida = await correr(ctx, progreso)
                 # "presupuesto" del bucle es haber hecho todas las rondas pedidas, no el tope de gasto.
                 motivo = MOTIVOS.get(corrida.motivo_parada, corrida.motivo_parada)
-            # Si la última llamada pasó el tope, el cancel quedó pendiente: se cobra aquí y no al devolver la tarea.
-            await asyncio.sleep(0)
+        except costos.PresupuestoAgotado as exc:
+            estado, motivo = "presupuesto", str(exc)
         except asyncio.CancelledError:
-            if not corte:
-                self._cerrar(run_id, store, "error", "cancelada", costo_previo + llm.gastado(), t0)
-                raise
-            tarea.uncancel()
-            estado, motivo = "presupuesto", corte[0]
+            self._cerrar(run_id, store, "error", "cancelada", costo_previo + llm.gastado(), t0)
+            (d / "costos.json").write_text(json.dumps({"previo": costo_previo, "por_rol": costos.por_rol(llm, config), "sin_confirmar_usd": llm.sin_confirmar}, indent=2))
+            raise
         except Exception as exc:  # noqa: BLE001
             # Nadie espera esta tarea de fondo: el error queda en el índice y en los eventos para la app.
             estado, motivo = "error", f"{type(exc).__name__}: {exc}"[:500]
         self._cerrar(run_id, store, estado, motivo, costo_previo + llm.gastado(), t0)
-        (d / "costos.json").write_text(json.dumps({"previo": costo_previo, "por_rol": costos.por_rol(llm, config)}, indent=2))
+        (d / "costos.json").write_text(json.dumps({"previo": costo_previo, "por_rol": costos.por_rol(llm, config), "sin_confirmar_usd": llm.sin_confirmar}, indent=2))
         return estado
 
     def _cerrar(self, run_id: str, store: Store, estado: str, motivo: str, costo: float, t0: float) -> None:

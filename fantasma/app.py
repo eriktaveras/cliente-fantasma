@@ -5,8 +5,11 @@ Arranque: `uv run uvicorn fantasma.app:app --host 127.0.0.1 --port <puerto>` det
 """
 
 import asyncio
+import base64
+import binascii
 import hashlib
 import hmac
+import ipaddress
 import json
 import os
 import re
@@ -27,6 +30,7 @@ from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from fantasma import remoto
+from fantasma.costos import PrecioDesconocido, PresupuestoAgotado
 from fantasma.ficha import Ficha
 from fantasma.motor.config import Remoto
 from fantasma.motor.esquemas import Moneda
@@ -86,8 +90,31 @@ def idioma_de(request: Request) -> str:
 
 
 def ip_de(request: Request) -> str:
-    # La app escucha solo en 127.0.0.1 detrás del túnel: el encabezado de Cloudflare es la IP real del visitante.
-    return request.headers.get("cf-connecting-ip") or (request.client.host if request.client else "desconocida")
+    directa = request.client.host if request.client else "desconocida"
+    if proxy_confiable(request):
+        try:
+            return str(ipaddress.ip_address(request.headers.get("cf-connecting-ip", "")))
+        except ValueError:
+            pass
+    return directa
+
+
+def proxy_confiable(request: Request) -> bool:
+    if not request.client:
+        return False
+    try:
+        ip = ipaddress.ip_address(request.client.host)
+        redes = [ipaddress.ip_network(x.strip()) for x in os.environ.get("FANTASMA_PROXY_CIDRS", "").split(",") if x.strip()]
+    except ValueError:
+        return False
+    return any(ip in red for red in redes)
+
+
+def es_https(request: Request) -> bool:
+    publico = urlsplit(os.environ.get("FANTASMA_URL_PUBLICA", ""))
+    return (request.url.scheme == "https"
+            or (publico.scheme == "https" and publico.netloc == request.headers.get("host"))
+            or (proxy_confiable(request) and request.headers.get("x-forwarded-proto") == "https"))
 
 
 def mismo_origen(request: Request) -> bool:
@@ -96,7 +123,11 @@ def mismo_origen(request: Request) -> bool:
     origen = request.headers.get("origin") or request.headers.get("referer")
     if not origen or origen == "null":
         return False
-    return urlsplit(origen).netloc == request.headers.get("host")
+    try:
+        u = urlsplit(origen)
+        return u.scheme in ("http", "https") and not u.username and u.netloc == request.headers.get("host")
+    except ValueError:
+        return False
 
 
 def lineas(texto: str) -> list[str]:
@@ -104,8 +135,13 @@ def lineas(texto: str) -> list[str]:
 
 
 def url_valida(url: str, esquemas: tuple[str, ...] = ("https", "http")) -> bool:
-    u = urlsplit(url)
-    return len(url) <= 500 and u.scheme in esquemas and bool(u.hostname)
+    try:
+        u = urlsplit(url)
+        puerto = u.port
+        return (len(url) <= 500 and u.scheme in esquemas and bool(u.hostname)
+                and not u.username and not u.password and (puerto is None or 1 <= puerto <= 65535))
+    except ValueError:
+        return False
 
 
 def encabezados_de(texto: str) -> dict[str, str]:
@@ -163,6 +199,18 @@ def ficha_de_form(form, base: Ficha) -> dict:
     }
 
 
+def clave_correcta(request: Request, clave: str) -> bool:
+    """Basic Auth con cualquier usuario: solo cuenta la clave."""
+    tipo, _, valor = request.headers.get("authorization", "").partition(" ")
+    if tipo.lower() != "basic":
+        return False
+    try:
+        dada = base64.b64decode(valor, validate=True).decode().partition(":")[2]
+    except (binascii.Error, UnicodeDecodeError):
+        return False
+    return hmac.compare_digest(dada.encode(), clave.encode())
+
+
 class Guardia:
     """Tamaño y mismo origen en todo lo que escribe, y cabeceras de seguridad en toda respuesta. ASGI puro y no
     BaseHTTPMiddleware: ese envuelve el SSE y deja de ver la desconexión del cliente."""
@@ -174,25 +222,63 @@ class Guardia:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         request = Request(scope)
-        if request.method not in ("GET", "HEAD", "OPTIONS"):
-            largo = request.headers.get("content-length", "")
-            rechazo = None
-            if not largo.isdigit() or int(largo) > MAX_CUERPO:
-                rechazo = PlainTextResponse(TEXTOS[idioma_de(request)]["err_grande"], status_code=413)
-            elif not mismo_origen(request):
-                rechazo = PlainTextResponse(TEXTOS[idioma_de(request)]["err_origen"], status_code=403)
-            if rechazo:
-                return await rechazo(scope, receive, send)
-
         async def con_cabeceras(mensaje) -> None:
             if mensaje["type"] == "http.response.start":
                 h = MutableHeaders(scope=mensaje)
                 h.setdefault("Content-Security-Policy", CSP)
                 h.setdefault("X-Content-Type-Options", "nosniff")
-                # same-origin: el token de la boleta pública no se filtra a sitios enlazados y el Referer propio sigue sirviendo a la guardia.
                 h.setdefault("Referrer-Policy", "same-origin")
                 h.setdefault("X-Frame-Options", "DENY")
+                if not request.url.path.startswith("/static/"):
+                    h.setdefault("Cache-Control", "no-store")
             await send(mensaje)
+
+        clave = os.environ.get("FANTASMA_CLAVE")
+        publica = request.method in ("GET", "HEAD") and (
+            request.url.path == "/salud" or re.fullmatch(r"/b/[A-Za-z0-9_-]{20,64}", request.url.path)
+            or request.url.path.startswith("/static/") or re.fullmatch(r"/idioma/(es|en)", request.url.path)
+        )
+        if clave and not publica and not clave_correcta(request, clave):
+            pedir = PlainTextResponse("Clave requerida", status_code=401, headers={"WWW-Authenticate": 'Basic realm="Cliente Fantasma", charset="UTF-8"'})
+            return await pedir(scope, receive, con_cabeceras)
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            largo = request.headers.get("content-length", "")
+            rechazo = None
+            if largo and (not largo.isdigit() or int(largo) > MAX_CUERPO):
+                rechazo = PlainTextResponse(TEXTOS[idioma_de(request)]["err_grande"], status_code=413)
+            elif largo and request.headers.get("transfer-encoding"):
+                rechazo = PlainTextResponse("Content-Length y Transfer-Encoding incompatibles", status_code=400)
+            elif not mismo_origen(request):
+                rechazo = PlainTextResponse(TEXTOS[idioma_de(request)]["err_origen"], status_code=403)
+            if rechazo:
+                return await rechazo(scope, receive, con_cabeceras)
+            cuerpo = bytearray()
+            try:
+                async with asyncio.timeout(30):
+                    while True:
+                        mensaje = await receive()
+                        if mensaje["type"] == "http.disconnect":
+                            return
+                        trozo = mensaje.get("body", b"")
+                        if len(cuerpo) + len(trozo) > MAX_CUERPO:
+                            rechazo = PlainTextResponse(TEXTOS[idioma_de(request)]["err_grande"], status_code=413)
+                            return await rechazo(scope, receive, con_cabeceras)
+                        cuerpo.extend(trozo)
+                        if not mensaje.get("more_body", False):
+                            break
+            except TimeoutError:
+                return await PlainTextResponse("Tiempo de recepción agotado", status_code=408)(scope, receive, con_cabeceras)
+            recibir_original = receive
+            pendiente = True
+
+            async def recibir_cuerpo():
+                nonlocal pendiente
+                if pendiente:
+                    pendiente = False
+                    return {"type": "http.request", "body": bytes(cuerpo), "more_body": False}
+                return await recibir_original()
+
+            receive = recibir_cuerpo
 
         await self.app(scope, receive, con_cabeceras)
 
@@ -250,7 +336,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
         valor = "~".join(ids)
         respuesta.set_cookie(
             COOKIE_MIAS, f"{valor}.{_firma(valor, request.app.state.secreto)}", max_age=30 * 24 * 3600, httponly=True,
-            secure=request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https", samesite="lax",
+            secure=es_https(request), samesite="lax",
         )
 
     def mia(request: Request, run_id: str) -> str:
@@ -274,8 +360,10 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
 
     @app.get("/como-funciona", response_class=HTMLResponse)
     async def como_funciona(request: Request):
-        modelos = {rol: r.modelo for rol, r in srv(request).config_base.roles.items()}
-        return pagina(request, "como.html", modelos=modelos)
+        config = srv(request).config_base
+        modelos = {rol: r.modelo for rol, r in config.roles.items()}
+        proveedores = sorted({r.proveedor for r in config.roles.values()})
+        return pagina(request, "como.html", modelos=modelos, proveedores=proveedores)
 
     @app.get("/idioma/{codigo}")
     async def cambiar_idioma(codigo: str, volver: str = "/"):
@@ -337,6 +425,10 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
             run_id = await srv(request).crear_ficha(urls, datos["texto"][:MAX_TEXTO], ip_de(request), datos["nombre"][:200])
         except Limite as exc:
             return pagina(request, "inicio.html", 429, error=str(exc), previas=_previas(request), datos=datos)
+        except PresupuestoAgotado as exc:
+            return pagina(request, "inicio.html", 429, error=str(exc), previas=_previas(request), datos=datos)
+        except PrecioDesconocido:
+            return pagina(request, "inicio.html", 503, error=TEXTOS[idioma_de(request)]["err_ficha_tecnico"], previas=_previas(request), datos=datos)
         except ValueError as exc:
             return pagina(request, "inicio.html", 400, error=str(exc), previas=_previas(request), datos=datos)
         except ErrorTecnico:
@@ -352,7 +444,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
             raise Rechazo("err_url_bot")
         try:
             await remoto.comprobar(Remoto(url=url, encabezados=encabezados), inseguro)
-        except ErrorTecnico as exc:
+        except (ErrorTecnico, ValueError) as exc:
             raise Rechazo("err_url_bot_rechazada", str(exc)) from None
 
     def _mensaje(request: Request, r: Rechazo) -> str:
@@ -465,7 +557,8 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
             if publica:
                 raise HTTPException(404) from None
             return pagina(request, "boleta.html", boleta=None, publica=False, run_id=run_id, estado=s.estado(run_id))
-        enlace = str(request.base_url).rstrip("/") + f"/b/{token}" if token else ""
+        base_publica = os.environ.get("FANTASMA_URL_PUBLICA", str(request.base_url)).rstrip("/")
+        enlace = base_publica + f"/b/{token}" if token else ""
         return pagina(request, "boleta.html", boleta=b, publica=publica, run_id=run_id if not publica else "", enlace=enlace)
 
     @app.get("/corrida/{run_id}/boleta", response_class=HTMLResponse)

@@ -581,12 +581,11 @@ async def generar_casos(llm, rubro: RubroSpec, reglas: list[Regla], caja: Caja, 
         try:
             borradores = await _lote_casos(llm, rubro, reglas, funciones, lote, propios, [c.persona.nombre for c in casos], progreso)
         except ErrorTecnico as exc:
-            # Un lote que no valida no tumba la corrida: se sigue con los demás mientras quede al menos la mitad de los casos.
             _avisar(progreso, f"se omiten {len(lote)} casos: {exc}")
             continue
         casos += [armar_caso(b, f, funciones, ids, progreso) for b, f in zip(borradores, lote)]
         _avisar(progreso, f"casos: {len(casos)}/{len(lista)}")
-    if len(casos) * 2 < len(lista):
+    if len(casos) != len(lista):
         raise ErrorTecnico(f"{ROL}: solo salieron {len(casos)} de {len(lista)} casos")
     return casos
 

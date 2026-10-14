@@ -323,7 +323,7 @@ async def test_lote_sin_herramienta_descarta_la_expectativa_sin_reintentar(llm, 
     assert [e.tipo for e in borradores[0].esperado] == ["escala"]
 
 
-async def test_un_lote_que_no_valida_no_tumba_los_casos(llm, rubro, monkeypatch):
+async def test_un_lote_que_no_valida_impide_evaluacion_parcial(llm, rubro, monkeypatch):
     async def sin_propios(*a):
         return []
 
@@ -336,7 +336,8 @@ async def test_un_lote_que_no_valida_no_tumba_los_casos(llm, rubro, monkeypatch)
     monkeypatch.setattr(g, "_lote_casos", lote)
     monkeypatch.setattr(g, "funciones_validas", lambda caja: {})
     avisos: list[str] = []
-    casos = await g.generar_casos(llm, rubro, [], None, 2 * g.TAM_LOTE_CASOS + 1, avisos.append)
-    assert len(casos) == 2 * g.TAM_LOTE_CASOS and any("se omiten 1 casos" in a for a in avisos)
+    with pytest.raises(ErrorTecnico, match="solo salieron"):
+        await g.generar_casos(llm, rubro, [], None, 2 * g.TAM_LOTE_CASOS + 1, avisos.append)
+    assert any("se omiten 1 casos" in a for a in avisos)
     with pytest.raises(ErrorTecnico):
         await g.generar_casos(llm, rubro, [], None, g.TAM_LOTE_CASOS - 1, None)

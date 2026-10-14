@@ -19,6 +19,17 @@ class Proveedor(BaseModel):
     # llama-server acepta chat_template_kwargs; OpenAI y otros lo rechazan.
     local: bool = True
 
+    # Tarifas explícitas por millón de tokens (entrada, salida); [0, 0] declara un modelo gratuito.
+    # `local` solo selecciona la API de plantillas y nunca implica coste cero.
+    precios: dict[str, tuple[float, float]] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _precios_validos(self) -> "Proveedor":
+        import math
+        if any(not math.isfinite(x) or x < 0 for par in self.precios.values() for x in par):
+            raise ValueError("Las tarifas deben ser finitas y no negativas")
+        return self
+
     def clave(self) -> str:
         if self.api_key:
             return self.api_key
@@ -32,7 +43,7 @@ class Rol(BaseModel):
     modelo: str
     temperatura: float = 0.7
     razonamiento: bool = False
-    max_tokens: int = 1200
+    max_tokens: int = Field(default=1200, ge=1)
 
 
 class Presupuesto(BaseModel):
@@ -76,7 +87,8 @@ class Remoto(BaseModel):
 class Config(BaseModel):
     proveedores: dict[str, Proveedor]
     roles: dict[RolNombre, Rol]
-    concurrency: int = 4
+    concurrency: int = Field(default=4, ge=1)
+    concurrency_global: int = Field(default=8, ge=1)
     repetitions_per_case: int = 2
     max_turns: int = 8
     timeout_s: float = 180

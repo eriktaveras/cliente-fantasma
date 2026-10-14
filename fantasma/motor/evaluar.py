@@ -5,7 +5,7 @@ from collections import defaultdict
 from statistics import mean
 from typing import TYPE_CHECKING, Callable
 
-from fantasma.motor.esquemas import Agregado, Caso, EvaluacionRep, ResultadoCaso, ResultadoJuez, Rubrica, Transcripcion, Verificacion
+from fantasma.motor.esquemas import Agregado, Caso, Cobertura, EvaluacionRep, ResultadoCaso, ResultadoJuez, Rubrica, Transcripcion, Verificacion
 from fantasma.motor.juez import juzgar
 from fantasma.motor.llm import ErrorTecnico
 from fantasma.motor.simulador import simular
@@ -51,7 +51,7 @@ def puntuar(verificaciones: list[Verificacion], juez: ResultadoJuez | None, rubr
     return puntaje, critica, not critica and puntaje >= umbral and esperados_ok
 
 
-def consolidar(evals: list[EvaluacionRep]) -> ResultadoCaso:
+def consolidar(evals: list[EvaluacionRep], reps: int | None = None) -> ResultadoCaso:
     pasos = [e.paso for e in evals]
     fallos = [v.id for e in evals for v in e.verificaciones if not v.ok]
     fallos += [p.criterio for e in evals if e.juez for p in e.juez.criterios if p.puntaje <= 2]
@@ -60,13 +60,36 @@ def consolidar(evals: list[EvaluacionRep]) -> ResultadoCaso:
         version=evals[0].version,
         puntajes=[e.puntaje for e in evals],
         puntaje=mean(e.puntaje for e in evals),
-        paso=all(pasos),
+        paso=all(pasos) and (reps is None or len({e.repeticion for e in evals}) == reps),
         inestable=any(pasos) and not all(pasos),
         fallos=list(dict.fromkeys(fallos)),
+        repeticiones=sorted({e.repeticion for e in evals}),
+        completo=reps is None or {e.repeticion for e in evals} == set(range(reps)),
     )
 
 
-def agregar(version: int, conjunto: str, resultados: list[ResultadoCaso], evals: list[EvaluacionRep], casos: list[Caso]) -> Agregado:
+def cobertura(casos: list[Caso], evals: list[EvaluacionRep], reps: int, solicitados: int | None = None) -> Cobertura:
+    solicitados = len(casos) if solicitados is None else max(solicitados, len(casos))
+    esperadas = {(c.id, r) for c in casos for r in range(reps)}
+    evaluadas = {(e.caso_id, e.repeticion) for e in evals} & esperadas
+    completos = {c.id for c in casos if all((c.id, r) in evaluadas for r in range(reps))}
+    presentes = {id_ for id_, _ in evaluadas}
+    faltantes = sorted(c.id for c in casos if c.critico and c.id not in completos)
+    return Cobertura(
+        casos_solicitados=solicitados,
+        casos_generados=len(casos),
+        casos_evaluados=len(presentes),
+        casos_completos=len(completos),
+        casos_excluidos=solicitados - len(completos),
+        repeticiones_solicitadas=solicitados * reps,
+        repeticiones_evaluadas=len(evaluadas),
+        repeticiones_excluidas=solicitados * reps - len(evaluadas),
+        criticos_faltantes=faltantes,
+        completa=bool(casos) and reps > 0 and len(completos) == solicitados,
+    )
+
+
+def agregar(version: int, conjunto: str, resultados: list[ResultadoCaso], evals: list[EvaluacionRep], casos: list[Caso], reps: int | None = None) -> Agregado:
     criticos = {c.id for c in casos if c.critico}
     incluidos = {r.caso_id for r in resultados}
     por_criterio: dict[str, list[float]] = defaultdict(list)
@@ -80,10 +103,11 @@ def agregar(version: int, conjunto: str, resultados: list[ResultadoCaso], evals:
         puntaje=mean(r.puntaje for r in resultados) if resultados else 0.0,
         casos=len(resultados),
         pasan=sum(r.paso for r in resultados),
-        criticos_total=sum(r.caso_id in criticos for r in resultados),
+        criticos_total=len(criticos),
         criticos_pasan=sum(r.paso and r.caso_id in criticos for r in resultados),
         inestables=sum(r.inestable for r in resultados),
         por_criterio={k: mean(v) for k, v in por_criterio.items()},
+        cobertura=cobertura(casos, evals, reps) if reps is not None else None,
     )
 
 
@@ -163,12 +187,12 @@ async def evaluar_conjunto(
     resultados = []
     for c in casos:
         if por_caso[c.id]:
-            resultados.append(consolidar(por_caso[c.id]))
+            resultados.append(consolidar(por_caso[c.id], reps))
         elif progreso:
             progreso(f"[{conjunto} v{version:03d}] {c.id} excluido: ninguna repetición válida (error técnico)")
 
     validas = [e for e in evals if e is not None]
-    agregado = agregar(version, conjunto, resultados, validas, casos)
+    agregado = agregar(version, conjunto, resultados, validas, casos, reps)
     ctx.store.guardar_resultados(conjunto, resultados)
     ctx.store.guardar_agregado(agregado)
     return agregado, resultados

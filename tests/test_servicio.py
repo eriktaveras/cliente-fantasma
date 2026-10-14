@@ -234,22 +234,25 @@ def test_tope_de_costo_detiene_limpio(servicio):
     assert estado == "presupuesto"
     fila = servicio.indice.obtener(run_id)
     assert fila.estado == "presupuesto" and "tope de la corrida" in fila.motivo
-    # Se pasa a lo sumo por lo que estaba en vuelo (concurrencia 2) dentro del centavo en que se detectó.
-    assert 0.03 < fila.costo_usd < 0.05
+    # La reserva bloquea la siguiente llamada antes de superar el tope.
+    assert 0 < fila.costo_usd <= 0.03
     estado_ = servicio.estado(run_id)
     assert estado_["corrida"]["estado"] == "presupuesto" and not estado_["activa"]
     fin = servicio.eventos.recientes(run_id)[-1]
     assert fin["tipo"] == "fin" and fin["estado"] == "presupuesto"
     if fin["boleta"]:
-        assert servicio.boleta(run_id).estado == "presupuesto"
+        assert servicio.boleta(run_id).estado == "incompleta"
 
 
 def test_tope_diario_global(servicio, monkeypatch):
     servicio.tope_diario = 0.02
     run_id, estado = correr(ficha_y_lanzar(servicio))
     assert estado == "presupuesto" and "tope diario" in servicio.indice.obtener(run_id).motivo
-    with pytest.raises(Limite, match="tope de gasto"):
+    gasto = servicio.indice.gasto_del_dia()
+    assert gasto <= servicio.tope_diario
+    with pytest.raises(costos.PresupuestoAgotado, match="tope diario"):
         correr(servicio.crear_ficha([], COLMADO, "5.6.7.8"))
+    assert servicio.indice.gasto_del_dia() == gasto
 
 
 def test_un_corte_ajeno_no_se_confunde_con_presupuesto(servicio):

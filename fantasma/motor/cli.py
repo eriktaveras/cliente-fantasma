@@ -167,13 +167,16 @@ def report(args) -> None:
 
 
 def exportar(args) -> None:
+    from fantasma.motor.agente import prompt_con_reglas
     from fantasma.motor.herramientas import caja_para
 
     d = _dir(args.run_id)
     store = Store(d)
     spec = store.cargar_spec()
+    if _config_de(d).remoto:
+        sys.exit("El prompt del bot remoto no se conoce: consulta su boleta para ver sugerencias, sin exportar un agente simulado.")
     final = store.corrida().mejor_version
-    prompt = store.texto(final)
+    prompt = prompt_con_reglas(store.texto(final), spec.rubro)
     if args.formato == "md":
         ruta = d / "export" / "system_prompt.md"
         ruta.parent.mkdir(exist_ok=True)

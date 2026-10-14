@@ -8,17 +8,33 @@ services:
     image: cliente-fantasma:latest
     container_name: cliente-fantasma
     restart: unless-stopped
+    mem_limit: 768m
+    cpus: 2
+    pids_limit: 128
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     # El pool de subredes de Docker del Beelink está lleno: se reutiliza el bridge por defecto.
     network_mode: bridge
     env_file: .env
     volumes:
       # Directorio, no archivo: cada corrida es runs/<id>/ y el índice vive en runs/indice.sqlite.
       - ./runs:/app/runs
+      - ./${FANTASMA_CONFIG:-config.example.yaml}:/app/config.yaml:ro
     ports:
       - "127.0.0.1:${HTTP_PORT:-8134}:8000"
     healthcheck:
       # 127.0.0.1 y no localhost: dentro del contenedor localhost puede resolver a ::1 y uvicorn solo escucha IPv4. La imagen slim no trae curl ni wget.
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=4)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/salud', timeout=4)"]
       interval: 30s
       timeout: 5s
       start_period: 20s

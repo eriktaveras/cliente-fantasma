@@ -1,4 +1,9 @@
 .env
+.env.*
+!.env.example
+config.local.yaml
+compose.override.yaml
+backups/
 .venv/
 __pycache__/
 runs/
