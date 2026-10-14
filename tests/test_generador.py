@@ -255,6 +255,29 @@ async def test_generar_spec_punta_a_punta(llm, config, rubro):
     assert inyeccion.etiquetas == {"critical", "adversarial"} and Expectativa(tipo="no_revela_prompt") in inyeccion.esperado
 
 
+async def test_generar_spec_con_prompt_base_no_genera_otro(llm, config, rubro, datos, rubrica, casos, monkeypatch):
+    async def sin_reglas(*args):
+        return []
+
+    async def rubrica_dada(*args):
+        return rubrica
+
+    async def casos_dados(*args):
+        return casos
+
+    async def prompt_prohibido(*args):
+        raise AssertionError("no debe generar otro prompt")
+
+    monkeypatch.setattr(g, "_reglas_propias", sin_reglas)
+    monkeypatch.setattr(g, "_rubrica", rubrica_dada)
+    monkeypatch.setattr(g, "generar_casos", casos_dados)
+    monkeypatch.setattr(g, "generar_prompt", prompt_prohibido)
+
+    spec = await g.generar_spec(llm, config, rubro, datos=datos, prompt_base="  Mis instrucciones  ")
+
+    assert spec.prompt_base == "Mis instrucciones"
+
+
 async def test_pedir_agota_reintentos(llm):
     llm.encolar("generador", g.ReglasPropuestas(reglas=[]), g.ReglasPropuestas(reglas=[]), g.ReglasPropuestas(reglas=[]))
     with pytest.raises(ErrorTecnico):

@@ -204,6 +204,7 @@ class Servicio:
             raise
         d = self._dir(run_id)
         d.mkdir(parents=True, exist_ok=True)
+        os.chmod(d, 0o700)
         (d / "ficha.json").write_text(ficha.model_dump_json(indent=2))
         self.indice.actualizar(run_id, estado="ficha", negocio=ficha.negocio, costo_usd=previo + llm.gastado())
         self._publicar(run_id, "ficha", ficha=ficha.model_dump(mode="json"))
@@ -220,11 +221,37 @@ class Servicio:
         self.indice.actualizar(run_id, negocio=ficha.negocio)
         return ficha
 
+    def guardar_seleccion(self, run_id: str, modo: Modo, prompt: str = "", url_bot: str = "") -> None:
+        if modo not in ("generado", "prompt", "remoto"):
+            raise ValueError(f"Modo de prueba desconocido: {modo}")
+        ruta = self._dir(run_id) / "seleccion.json"
+        seleccion = {
+            "modo": modo,
+            "prompt": prompt if modo == "prompt" else "",
+            "url_bot": url_bot if modo == "remoto" else "",
+        }
+        ruta.write_text(json.dumps(seleccion, ensure_ascii=False))
+        os.chmod(ruta, 0o600)
+
+    def seleccion(self, run_id: str) -> dict[str, str]:
+        ruta = self._dir(run_id) / "seleccion.json"
+        if not ruta.exists():
+            return {"modo": "generado", "prompt": "", "url_bot": ""}
+        return json.loads(ruta.read_text())
+
     # ------------------------------------------------------------ 2. corrida
 
     async def lanzar(
-        self, run_id: str, modo: Modo, tamaño: Tamaño, url_bot: str | None = None, encabezados: dict[str, str] | None = None
+        self,
+        run_id: str,
+        modo: Modo,
+        tamaño: Tamaño,
+        url_bot: str | None = None,
+        encabezados: dict[str, str] | None = None,
+        prompt_usuario: str | None = None,
     ) -> asyncio.Task:
+        if modo not in ("generado", "prompt", "remoto"):
+            raise ValueError(f"Modo de prueba desconocido: {modo}")
         fila = self._fila(run_id)
         if fila.estado != "ficha":
             raise ValueError(f"La corrida {run_id} no está esperando lanzamiento (estado {fila.estado})")
@@ -234,6 +261,10 @@ class Servicio:
             raise Limite("La demo llegó a su tope de gasto de hoy. Vuelve mañana.")
         if self.indice.gasto_del_dia_de(fila.ip_hash) >= self.tope_ip:
             raise Limite("Llegaste al tope de gasto por visitante de hoy. Vuelve mañana.")
+        if modo == "prompt" and not (prompt_usuario or "").strip():
+            raise ValueError("El modo prompt necesita las instrucciones que quieres probar")
+        if modo == "prompt" and tokens(prompt_usuario or "") > self.config_base.optimizacion.max_prompt_tokens:
+            raise ValueError(f"Las instrucciones superan el límite de {self.config_base.optimizacion.max_prompt_tokens} tokens")
         config = self._config(modo, tamaño, url_bot, encabezados)
         # Se reserva antes del primer await: dos POST simultáneos verían los dos 'ficha' y lanzarían dos corridas.
         self.indice.actualizar(run_id, modo=modo, tamaño=tamaño, estado="generando")
@@ -244,12 +275,20 @@ class Servicio:
             except Exception:
                 self.indice.actualizar(run_id, estado="ficha")
                 raise
-        tarea = asyncio.create_task(self._correr(run_id, config, modo, tamaño, fila.costo_usd))
+        tarea = asyncio.create_task(self._correr(run_id, config, modo, tamaño, fila.costo_usd, prompt_usuario))
         self.tareas[run_id] = tarea
         tarea.add_done_callback(lambda _: self.tareas.pop(run_id, None))
         return tarea
 
-    async def _correr(self, run_id: str, config: Config, modo: Modo, tamaño: Tamaño, costo_previo: float) -> str:
+    async def _correr(
+        self,
+        run_id: str,
+        config: Config,
+        modo: Modo,
+        tamaño: Tamaño,
+        costo_previo: float,
+        prompt_usuario: str | None = None,
+    ) -> str:
         t0 = time.monotonic()
         d = self._dir(run_id)
         publicar = lambda tipo, **datos: self._publicar(run_id, tipo, **datos)
@@ -282,7 +321,14 @@ class Servicio:
         try:
             publicar("etapa", etapa="generando")
             rubro = rubro_de(ficha)
-            spec = await generar_spec(llm, config, rubro, progreso, datos=a_datos(ficha, rubro))
+            spec = await generar_spec(
+                llm,
+                config,
+                rubro,
+                progreso,
+                datos=a_datos(ficha, rubro),
+                prompt_base=prompt_usuario if modo == "prompt" else None,
+            )
             store.guardar_spec(spec)
             self.indice.actualizar(run_id, estado="corriendo")
             publicar("etapa", etapa="conversando", casos=len(spec.casos))

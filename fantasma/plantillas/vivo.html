@@ -4,11 +4,11 @@
 {% block pagina %}vivo{% endblock %}
 {% block contenido %}
 <div class="envoltura seccion" data-vivo data-eventos="/corrida/{{ run_id }}/eventos" data-estado-url="/corrida/{{ run_id }}/estado"
-     data-boleta="/corrida/{{ run_id }}/boleta" data-activa="{{ 'si' if activa else 'no' }}" data-estado="{{ estado.estado }}">
+     data-boleta="/corrida/{{ run_id }}/boleta" data-activa="{{ 'si' if activa else 'no' }}" data-estado="{{ estado.estado }}" data-modo="{{ estado.modo }}">
   <header class="encabezado encabezado--fila">
     <div>
       <p class="rotulo rotulo--verde">{{ t.vivo_rotulo }}</p>
-      <h1 class="titular titular--s">{{ estado.negocio }}</h1>
+      <h1 class="titular titular--s">{{ estado.negocio }}</h1><p class="bajada espaciado-arriba">{{ t.ui.vivo_bajada }}</p>
     </div>
     <span class="pildora conexion" data-conexion><span class="pildora__punto"></span><span data-conexion-texto>{{ t.vivo_conectando }}</span></span>
   </header>
@@ -38,6 +38,8 @@
     {% endif %}
   </div>
 
+  <div class="conversaciones-cabeza"><h2 class="titular-seccion">{{ t.ui.conversaciones_titulo }}</h2><div class="filtros" data-filtros hidden><button type="button" data-filtro="todas" aria-pressed="true">{{ t.ui.filtro_todas }}</button><button type="button" data-filtro="fallas" aria-pressed="false">{{ t.ui.filtro_fallas }}</button></div></div>
+  <p class="vacio-vivo" data-filtro-vacio hidden role="status">{{ t.ui.sin_filtro }}</p>
   <div class="conversaciones" data-conversaciones>
     <p class="vacio-vivo" data-vacio>{{ t.esperando_conversaciones if activa else t.vivo_ya_termino }}</p>
   </div>

@@ -20,17 +20,18 @@
 {% else %}
 {% set ver = boleta.veredicto %}
 {% set mejoro = boleta.mejor.version != boleta.inicial.version %}
-{% set gen = boleta.modo != "remoto" %}
-{% set sfx = "_gen" if gen else "" %}
+{% set gen = boleta.modo == "generado" %}
+{% set prm = boleta.modo == "prompt" %}
+{% set sfx = "_gen" if gen else ("_prompt" if prm else "") %}
 <section class="hero hero--boleta">
   <div class="envoltura boleta__cabeza">
     <div>
       <p class="rotulo rotulo--verde">{{ t.boleta_publica_rotulo if publica else t.boleta_rotulo }}</p>
       <h1 class="titular titular--s">{{ boleta.negocio }}</h1>
-      <p class="veredicto veredicto--{{ ver }}"><span class="veredicto__punto" aria-hidden="true"></span>{{ t["veredicto_" ~ ver] }}</p>
+      <p class="veredicto veredicto--{{ ver }}"><span class="veredicto__punto" aria-hidden="true"></span>{{ t.veredictos[boleta.modo][ver] }}</p>
       {% if boleta.estado == "presupuesto" %}<p class="aviso aviso--ambar espaciado-arriba">{{ t.estado_presupuesto }}</p>{% endif %}
       {% if boleta.estado == "error" %}<p class="aviso aviso--rojo espaciado-arriba">{{ t.estado_error }}</p>{% endif %}
-      <p class="parrafo espaciado-arriba">{{ t.modo_generado_aviso if gen else t.modo_remoto_aviso }}</p>
+      <p class="parrafo espaciado-arriba">{{ t.ui.informe_pista }}</p><p class="campo__pista espaciado-arriba">{{ t["modo_" ~ boleta.modo ~ "_aviso"] }}</p>
     </div>
     <div class="isla nota">
       <div class="isla__bloque nota__bloque">
@@ -49,9 +50,10 @@
   </div>
 </section>
 
+<nav class="envoltura informe-anclas" aria-label="{{ t.ui.navegacion }}"><a href="#h-fallas">{{ t.ui.informe_evidencia }}</a><a href="#h-parche">{{ t.ui.informe_ajustes }}</a><a href="#h-criterios">{{ t.ui.informe_detalles }}</a><a href="#h-datos">{{ t.ui.informe_compartir }}</a></nav>
 {% if boleta.mejor.cobertura %}
 {% set c = boleta.mejor.cobertura %}
-<section class="envoltura seccion" aria-labelledby="h-cobertura">
+<section class="envoltura seccion cobertura" aria-labelledby="h-cobertura">
   <h2 class="titular-seccion" id="h-cobertura">{{ t.cobertura_titulo }}</h2>
   {% if not c.completa %}<p class="aviso aviso--ambar" role="status">{{ t.cobertura_pista }}</p>{% endif %}
   <dl class="cifras espaciado-arriba">
@@ -67,6 +69,7 @@
 <section class="envoltura seccion" aria-labelledby="h-fallas">
   <p class="rotulo rotulo--verde">{{ t.fallas_rotulo }}</p>
   <h2 class="titular-seccion" id="h-fallas">{{ t.fallas_titulo }}</h2>
+  <p class="campo__pista">{{ t["fallas_contexto" ~ sfx] }}</p>
   {% if not boleta.fallas %}<p class="aviso aviso--verde">{{ t.sin_fallas }}</p>{% endif %}
   <ol class="fallas">
     {% for f in boleta.fallas %}
@@ -84,10 +87,14 @@
           <li class="pildora pildora--chica {{ 'pildora--rojo' if eje == 'ataque' else '' }}">{{ t.valores.get(valor, valor) }}</li>
           {% endif %}{% endfor %}
         </ul>
+        {% if publica and prm %}<p class="aviso aviso--ambar espaciado-arriba">{{ t.evidencia_privada_prompt }}</p>
+        {% else %}
         {% if f.cita %}<blockquote class="cita"><p class="rotulo rotulo--chico texto-rojo">{{ t.aqui_fallo }}</p><p class="cita__texto">{{ f.cita }}</p></blockquote>{% endif %}
         <p class="falla__motivo"><span class="rotulo rotulo--chico">{{ t.por_que }}</span> {{ f.motivo }}</p>
+        {% endif %}
       </div>
-      <details class="isla__bloque falla__conv" {% if loop.first %}open{% endif %}>
+      {% if not (publica and prm) %}
+      <details class="isla__bloque falla__conv">
         <summary class="enlace-texto">{{ t.ver_conversacion }}</summary>
         <ol class="chat" data-chat>
           {% for m in f.conversacion %}
@@ -98,9 +105,50 @@
           {% endfor %}
         </ol>
       </details>
+      {% endif %}
     </li>
     {% endfor %}
   </ol>
+</section>
+
+<section class="envoltura seccion" aria-labelledby="h-parche">
+  <p class="rotulo rotulo--verde">{{ t["parche_rotulo" ~ sfx] }}</p>
+  {% set p = boleta.parche %}
+  {% set titulo_parche = (t.parche_titulo_gen if p.tipo == "prompt_final" else t.parche_titulo_borrador_gen) if gen else ((t.parche_titulo_prompt if p.tipo == "prompt_final" else t.parche_titulo_borrador_prompt) if prm else t.parche_titulo_sugerencia) %}
+  {% if p.tipo == "ninguno" %}
+  <h2 class="titular-seccion" id="h-parche">{{ titulo_parche }}</h2>
+  <p class="aviso">{{ t.parche_ninguno }}</p>
+  {% else %}
+  <h2 class="titular-seccion" id="h-parche">{{ titulo_parche }}</h2>
+  {% if publica and prm %}
+  <p class="aviso aviso--ambar">{{ t.parche_privado_prompt }}</p>
+  {% else %}
+  <div class="isla">
+    <div class="isla__bloque">
+      <p class="aviso {{ 'aviso--verde' if p.tipo == 'prompt_final' else 'aviso--ambar' }}">{{ t["parche_final_pista" ~ sfx] if p.tipo == "prompt_final" else t["parche_sugerencia_pista" ~ sfx] }}</p>
+      {% if p.motivo %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.parche_rechazo }}</span> {{ p.motivo }}</p>{% endif %}
+      {% if p.cambio %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.cambio }}</span> {{ p.cambio }}</p>{% endif %}
+      {% if p.hipotesis %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.hipotesis }}</span> {{ p.hipotesis }}</p>{% endif %}
+    </div>
+    <div class="isla__bloque">
+      <div class="copiable">
+        <label class="campo">
+          <span class="campo__etiqueta">{{ titulo_parche }}</span>
+          <textarea class="campo__entrada campo__entrada--mono prompt" id="prompt" rows="14" readonly>{{ p.texto }}</textarea>
+        </label>
+        <button class="boton boton--suave" type="button" data-copiar="#prompt">{{ t.copiar }}</button>
+      </div>
+      {% if p.diff %}
+      <details class="espaciado-arriba">
+        <summary class="enlace-texto">{{ t.ver_diff }}</summary>
+        <pre class="diff">{% for linea in p.diff.splitlines() %}<span class="diff__linea {{ 'diff__linea--mas' if linea.startswith('+') and not linea.startswith('+++') else ('diff__linea--menos' if linea.startswith('-') and not linea.startswith('---') else '') }}">{{ linea }}</span>
+{% endfor %}</pre>
+      </details>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
 </section>
 
 <section class="envoltura seccion" aria-labelledby="h-criterios">
@@ -130,6 +178,7 @@
 <section class="envoltura seccion" aria-labelledby="h-ejes">
   <p class="rotulo rotulo--verde">{{ t.ejes_rotulo }}</p>
   <h2 class="titular-seccion" id="h-ejes">{{ t.ejes_titulo }}</h2>
+  <p class="campo__pista">{{ t["ejes_contexto" ~ sfx] }}</p>
   <div class="rejilla rejilla--2 rejilla--apretada">
     {% for eje in ("dialecto", "intencion", "ataque", "estilo") if eje in boleta.por_eje %}
     <div class="isla isla--suave">
@@ -145,40 +194,7 @@
 </section>
 {% endif %}
 
-<section class="envoltura seccion" aria-labelledby="h-parche">
-  <p class="rotulo rotulo--verde">{{ t["parche_rotulo" ~ sfx] }}</p>
-  {% set p = boleta.parche %}
-  {% if p.tipo == "ninguno" %}
-  <h2 class="titular-seccion" id="h-parche">{{ t.parche_titulo_gen if gen else t.parche_titulo_sugerencia }}</h2>
-  <p class="aviso">{{ t.parche_ninguno }}</p>
-  {% else %}
-  <h2 class="titular-seccion" id="h-parche">{{ t.parche_titulo_gen if gen else (t.parche_titulo_final if p.tipo == "prompt_final" else t.parche_titulo_sugerencia) }}</h2>
-  <div class="isla">
-    <div class="isla__bloque">
-      <p class="aviso {{ 'aviso--verde' if p.tipo == 'prompt_final' else 'aviso--ambar' }}">{{ t["parche_final_pista" ~ sfx] if p.tipo == "prompt_final" else t["parche_sugerencia_pista" ~ sfx] }}</p>
-      {% if p.motivo %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.parche_rechazo }}</span> {{ p.motivo }}</p>{% endif %}
-      {% if p.cambio %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.cambio }}</span> {{ p.cambio }}</p>{% endif %}
-      {% if p.hipotesis %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.hipotesis }}</span> {{ p.hipotesis }}</p>{% endif %}
-    </div>
-    <div class="isla__bloque">
-      <div class="copiable">
-        <label class="campo">
-          <span class="campo__etiqueta">{{ t.parche_titulo_gen if gen else (t.parche_titulo_final if p.tipo == "prompt_final" else t.parche_titulo_sugerencia) }}</span>
-          <textarea class="campo__entrada campo__entrada--mono prompt" id="prompt" rows="14" readonly>{{ p.texto }}</textarea>
-        </label>
-        <button class="boton boton--suave" type="button" data-copiar="#prompt">{{ t.copiar }}</button>
-      </div>
-      {% if p.diff %}
-      <details class="espaciado-arriba">
-        <summary class="enlace-texto">{{ t.ver_diff }}</summary>
-        <pre class="diff">{% for linea in p.diff.splitlines() %}<span class="diff__linea {{ 'diff__linea--mas' if linea.startswith('+') and not linea.startswith('+++') else ('diff__linea--menos' if linea.startswith('-') and not linea.startswith('---') else '') }}">{{ linea }}</span>
-{% endfor %}</pre>
-      </details>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
-</section>
+
 
 <section class="envoltura seccion" aria-labelledby="h-datos">
   <p class="rotulo rotulo--verde" id="h-datos">{{ t.datos_rotulo }}</p>

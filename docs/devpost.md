@@ -1,98 +1,91 @@
 # Devpost submission draft: Cliente Fantasma
 
-> Draft for the Nebius x NVIDIA Global AI Hackathon form. Fill the bracketed links before submitting (deadline: Thu Oct 30, 2026, 1:00 PM EDT).
+Reviewed against the [official rules](https://nebiusglobalaihackathon.devpost.com/rules) on October 14, 2026. Submission deadline: **Friday, October 30, 2026, 10:00 AM PDT / 1:00 PM EDT**. Judging runs December 1–15, 2026.
+
+This is a draft. Do not mark the submission complete until every remaining item below is verified.
 
 ## Basics
 
-- **Project name:** Cliente Fantasma
-- **Tagline:** Stress-test your WhatsApp sales bot with synthetic Latin American customers before real customers do.
+- **Project name:** Cliente Fantasma (Ghost Customer)
+- **Tagline:** Find invented prices, unauthorized promises and manipulation failures in sales bots before real customers do.
 - **Track:** Best Apps and Agents
-- **Team:** Erik Taveras (solo)
-- **Demo:** https://fantasma.eriktaveras.com
-- **Code:** [GitHub link] (MIT)
-- **Video:** [YouTube link]
-- **Built with:** NVIDIA Nemotron 3 Nano, NVIDIA Nemotron 3 Ultra, Nebius Token Factory, Tavily, Python 3.12, FastAPI, Pydantic, SQLite, n8n, Docker, Cloudflare Tunnel
+- **Author:** Erik Taveras
+- **Demo:** https://fantasma.eriktaveras.com/idioma/en?volver=/
+- **Code:** https://github.com/eriktaveras/cliente-fantasma (MIT)
+- **Video:** PENDING — public YouTube URL, duration below three minutes.
+- **Built with:** NVIDIA Nemotron 3 Nano, NVIDIA Nemotron 3 Ultra, Nebius Token Factory, Tavily, Python, FastAPI, Jinja, Pydantic, SQLite, Docker, n8n and Cloudflare Tunnel.
 
-## Inspiration
+## Inspiration and audience
 
-Small businesses in Latin America sell on WhatsApp, and many are now putting an AI bot in that chat. I build these automations for clients and teach them to business owners in Spanish. The same pattern keeps showing up: the bot gets built in an afternoon and goes live without a single test. Then it invents a price, promises free delivery, gives a discount to anyone who says "the owner told me", or doesn't understand a Dominican customer who writes "klk cuanto e".
-
-Nobody tests these bots because testing a conversational agent takes a team, a dataset and a week. A corner-store owner has none of those.
+Small businesses in Latin America increasingly put sales bots in their WhatsApp workflows. A bot that invents a price, accepts an invented discount or misunderstands informal regional Spanish can lose a sale or make an unauthorized commitment. Owners rarely have a dedicated evaluation team or a representative conversational test set. Cliente Fantasma gives them a repeatable way to inspect those failures with business-specific evidence.
 
 ## What it does
 
-You give it your business (a URL, or just paste your price list and policies). In about three minutes you get a report card:
+The owner supplies a price list and business policies, optionally supplemented by public web research. They review the extracted business card before starting a test. Synthetic customers then converse with either a generated example bot or an existing bot connected by webhook. The report shows evaluated coverage, scores, critical failures with exact quotes, dialect/attack breakdowns and suggested prompt changes with their validation status.
 
-1. **Business card.** Tavily reads what's public about the business and Nemotron Ultra turns it into a fact sheet: products, prices, hours, delivery zones, payment methods, policies. Code rejects any price that isn't in the source material. The owner reviews and edits it.
-2. **Ghosts.** Nemotron Ultra generates synthetic customers along four axes: intent (buy, ask price, out-of-catalog, haggle, complaint, wholesale, delivery), attack (none, deception, prompt injection, pressure), dialect (Dominican, Mexican, Colombian, Argentine, Spain) and writing style (no accents, split messages, emojis, hurry, bad spelling). Each ghost has a hidden goal and the ground truth.
-3. **Live conversations.** The ghosts chat with the bot, and you watch it happen live in the browser. The bot is either a Nemotron Nano agent built from your card, with simulated catalog, order, FAQ and escalation tools, or **your own bot** through a webhook (there's an n8n template).
-4. **Judge.** Code checks every price and product the bot mentions against the card. Then Nemotron Ultra grades each conversation with a fixed sales-bot rubric (invents, promises, gives in to deception, escalates, advances the sale, understands the dialect, WhatsApp tone) plus criteria specific to the business.
-5. **Fix.** Nemotron Ultra rewrites the bot's prompt from the failures. The change is accepted only if it improves on the training cases and holds on a holdout set.
-6. **Report card.** Score 0-100, a verdict (Ready / Needs fixes / Don't ship it), the 3 worst failures with the exact message quoted, scores by dialect and by attack, the before/after prompt with a diff, a public share link and a JSONL export of every conversation.
+The generated mode does not claim to test an existing WhatsApp bot. The example business is fictitious. A rejected prompt proposal remains a suggestion, and an incomplete evaluation cannot approve a bot. Findings help prioritize human review; the automated judge still requires calibration.
 
-## How we built it
+## How it works and use of Nebius / NVIDIA
 
-- **Engine:** I started from *cuna*, my own prompt-optimization engine for sales agents (October 2026): an OpenAI-compatible client with one model per role, a simulator, an agent with simulated tools, a judge, an optimizer with a holdout set, and a SQLite store per run. For this hackathon I added the business card, the ghost axes and fixed rubric, Bring your bot, the budgeted service layer, the report card and the web app.
-- **Web:** FastAPI with Jinja templates and plain JS. Conversations are streamed over Server-Sent Events. Each run executes in the background with a live budget.
-- **Synthetic data is the core.** Everything the judge needs is generated: the personas, their hidden goals, the expected behaviour, the ground truth. The distribution is deterministic, so even a 15-ghost run covers every intent and every dialect, half of the ghosts attack, and no combination repeats in the first 200.
-- **Cost control:** every LLM call is metered per role. A run is cancelled cleanly when it hits its cap, and the report card is built from what was measured. A global daily cap and per-visitor limits keep the public demo alive until judging ends.
-- **Deployment:** Docker on a home server, exposed through a Cloudflare Tunnel. All inference runs on Token Factory.
+The hackathon configuration sends runtime requests to **https://api.tokenfactory.nebius.com/v1**:
 
-## How we used NVIDIA Nemotron and Nebius Token Factory
-
-All five roles run on Nemotron through Token Factory's OpenAI-compatible API (`https://api.tokenfactory.nebius.com/v1`):
-
-| Role | Model | Reasoning |
+| Role | NVIDIA model | Purpose |
 |---|---|---|
-| Sales bot under test | Nemotron 3 Nano 30B-A3B | off |
-| Ghost customers | Nemotron 3 Ultra 550B-A55B | off |
-| Case and card generator | Nemotron 3 Ultra | on |
-| Judge | Nemotron 3 Ultra | off |
-| Prompt optimizer | Nemotron 3 Ultra | on |
+| Sales agent under test | Nemotron 3 Nano 30B-A3B | Fast responses with simulated catalog, order, FAQ and human-escalation tools |
+| Customer simulator | Nemotron 3 Ultra 550B-A55B | Multi-turn synthetic customers with regional Spanish and adversarial goals |
+| Case generator | Nemotron 3 Ultra | Business-specific personas, expected behavior and evaluation criteria |
+| Business-card extraction | Nemotron 3 Ultra | Structured products, prices and policies from supplied material |
+| Judge | Nemotron 3 Ultra | Evidence-based grading grounded in the approved business card |
+| Optimizer | Nemotron 3 Ultra | Prompt proposals tested against training and held-out cases |
 
-- **Nano is the bot** because it's what a small business can afford: fast, cheap and capable of tool calling. In a measured run the bot cost US$0.050 out of US$0.52, about 10% of the total.
-- **Ultra does the synthetic data generation:** the cases, and the customers themselves turn by turn. It was by far the most convincing at regional Spanish, and it kept a hidden goal across a whole conversation. It also does the structured extraction for the card, the grading with quotes and the prompt rewriting.
-- **Reasoning is toggled per role** with `chat_template_kwargs.enable_thinking`. It's on for generation and optimization, where it improves the output, and off for the bot, the ghosts and the judge, where it would only burn tokens and latency.
-- **Structured output** (JSON schema) is used for the card, the cases, the judge verdicts and the optimizer proposals.
-- **Real numbers:** a business card costs US$0.004-0.010. A light run with 15 ghosts and 1 optimization round takes 3 to 3.6 minutes and US$0.45-0.52 with the generated bot, or 1.5 to 2.5 minutes and US$0.22-0.26 against your own webhook (capped at US$1.00).
+Token Factory's OpenAI-compatible API lets the same client use separate models and reasoning settings per role without hosting model weights or provisioning GPUs. Nano handles the tested sales agent; Ultra handles the synthetic-data and evaluation workflow. Structured outputs, tool calls and token-usage accounting are part of the implementation. The web app runs in Docker on the author's homelab; inference runs on Nebius. Serverless Jobs/Endpoints are not used or claimed.
 
-## How we used Tavily
+Optional Tavily search/extract supplements public business information. Owner-provided text takes precedence, and extraction checks product–price–currency associations. Missing information remains explicit. Live conversations use SSE; SQLite stores run artifacts. Conservative reservations bound model spending before requests; unknown model prices fail before inference.
 
-Tavily **extract** reads the URLs the owner gives (website, link-in-bio page, menu). Tavily **search** (`include_raw_content=markdown`, 5 results) finds what else is public about the business. The owner's pasted text always goes first. If Tavily can't read a page, the run continues with what the owner pasted. Nemotron Ultra structures the material under a no-invention rule, and code double-checks every price.
+## Product design and impact
 
-## Challenges we ran into
+The interface follows four stages: business information → review → live test → results. Advanced fields are folded, the mobile layout retains navigation, and English/Spanish controls are available. Results prioritize evidence and coverage rather than an isolated score. Existing bots can be connected with the documented HTTPS webhook/n8n contract.
 
-- **The model guessed what the business sells.** The case generator only saw the business description. On the first real run Ultra read "colmado" (a Dominican corner store) as a mattress shop and generated ghosts asking about mattresses. Fix: product names go into the description. The next run had zero mattresses.
-- **Empty catalogs.** In 1 of 5 runs Ultra returned a card with no products although the material had prices. Code validation now catches it and retries with the problem listed. The retry fixed it every time.
-- **Judging a bot you can't see inside.** In Bring your bot mode there are no tool calls to check. Some checks would always pass and inflate the score, others would produce false criticals. I went through every check and decided which to skip, which to keep (invented prices against the card) and which to detect from the text (handing off to a human).
-- **A public app that calls URLs typed by strangers.** That's an SSRF invitation. Fix: HTTPS only, every resolved IP must be global, the connection is pinned to the validated IP (no DNS rebinding), no redirects, and a size cap on the response.
-- **The optimizer inflates prompts.** One proposal went from 1,112 to 3,311 tokens. The validator rejects proposals over the limit, and the report card shows them as a suggestion instead.
-- **Spending real money in a public demo.** I needed per-run, per-visitor and global daily caps that cut cleanly in the middle of a run. They were tested for real: a capped run overshot by only US$0.009 of in-flight calls.
+The specific intended impact is earlier detection of pricing and policy failures for small-business sales automations. We do not claim measured revenue gains, universal dialect coverage or human-level judging accuracy. Offline scripted tests validate software behavior; they are not evidence of live model quality.
 
-## Accomplishments that we're proud of
+## Development during the submission period
 
-- The first real test found real bugs. The corner store's bot invented a delivery fee ("$5", "free from RD$150" when the minimum is RD$500) and quoted eggs at RD$380 instead of RD$330. The report card pointed to the exact message.
-- It works with the bots people already have: the ghosts can talk to a real n8n bot.
-- A light report card for 25 to 50 cents.
-- 310 offline tests.
+Cliente Fantasma reuses the author's own *cuna* prompt-optimization engine. The project record describes that base engine as written in October 2026. The hackathon-specific work includes business-card extraction, synthetic-customer axes, the sales rubric, the existing-bot webhook, budgeted service, live web interface and shareable reports.
 
-## What we learned
+The October 14 changes add coverage integrity, stronger grounded evaluation, product–price association checks, protected critical rules, conservative request reservations, daily accounting, deployment hardening and backup restoration. The frontend was restructured into a coherent four-stage desktop/mobile workflow. These are substantial application changes rather than a reskin of the engine. If any base project actually predates **August 26, 2026**, confirm its original date and keep this explanation of the additions made during the submission period.
 
-- For synthetic customers, voice matters as much as intent. A ghost that writes like a real Dominican customer finds failures that a polite, clean-Spanish tester never triggers.
-- The judge needs ground truth, not opinions. The deterministic checks against the card are what make a "this bot invents prices" verdict trustworthy.
-- Big model where it creates the data, small model where it serves the customer. That split is what makes the economics work.
+## Testing instructions for Devpost (private field)
 
-## What's next
+1. Open the English demo URL above. In the browser's Basic authentication prompt, use any username and the **current demo password supplied privately by Erik**. Do not publish it in GitHub, screenshots or the video.
+2. Choose **Create a test bot**, click **Use an example**, and continue. Review the fictitious business card.
+3. Select **Light** and launch. Watch conversations/evaluations; open the report when the run stops. Runtime varies and model requests are subject to a US$1 run cap.
+4. Inspect coverage, exact failure messages, prompt-validation status, export and sharing controls. A budget stop produces a partial report, not a passing result.
+5. Use **How it works** to inspect active models. For an existing bot, use **Connect my bot** with the README webhook contract.
+6. If testing locally, follow the README setup, set a valid `NEBIUS_API_KEY`, copy `config.example.yaml` to `config.yaml`, and use pasted example data; Tavily is optional.
 
-- Calibrate the judge against a hand-labelled set of conversations (the tooling exists: `calibrate`).
-- Aggregate findings across all public runs ("X% of bots invent prices") as a public dashboard.
-- Recurring tests: re-run the ghosts every time the owner changes their bot or their prices.
-- More dialects (Peru, Chile, Venezuela, Puerto Rico) and currencies.
-- Voice notes as input, if Token Factory adds a speech or omni model.
+The operator must keep the hosted project free and available to judges through **December 15, 2026**, provide the actual credentials in the private submission field and ensure budget limits do not prevent their evaluation.
+
+## Technical verification — October 14, 2026
+
+- Public GitHub repository verified accessible with GitHub-detected MIT license.
+- Deployed configuration verified: all six roles use NVIDIA Nemotron Nano/Ultra through Nebius Token Factory; the local Ornith provider is inactive.
+- Both configured models returned successful live inference responses. A complete Light run through the hosted app finished with 15/15 cases and 15/15 required repetitions, at an observed US$0.463754. [Read-only report with fictitious business data](https://fantasma.eriktaveras.com/b/7E2rUIHGg4a_4bO4K02oQ5ax). The generated bot scored 26/100 with 11 critical failures; its prompt proposal was rejected. This demonstrates detection and transparent reporting, not successful model remediation or calibrated accuracy.
+- Production Docker test target: **385 passed, 1 skipped**. The skipped opt-in live test was covered separately by the hosted end-to-end run; it remains skipped in the offline suite.
+- English demo route and public report returned HTTP 200; the shared report was visually checked at a 390px mobile width.
+- Code/UX/doc changes remain uncommitted on `design/ux-frontend-20261014`; the public default branch has not yet been updated to this release.
+
+## Submission items still requiring release or author input
+
+- [ ] Commit/publish the current audited code and UX to the public repository, then verify that the submitted branch contains this version and GitHub shows MIT.
+- [ ] Paste a real public YouTube video URL below three minutes. Show the app working, the active Nemotron models and their runtime use of Token Factory. All narration/captions and submission materials must be English or include an English translation.
+- [ ] Supply working demo credentials privately in Devpost and test access from a fresh browser.
+- [ ] Confirm personal/team eligibility and any pre-existing project dates; select a Builders & Brews city only if actually attended.
+- [ ] Confirm the final submission form contains description, category, demo, public code, video, feedback and any required prior-work explanation.
+- [ ] Keep demo access, inference credits and availability working throughout judging. Current caps alone do not establish that future availability.
 
 ## Feedback on Nebius Token Factory / NVIDIA
 
-Real findings from building this:
+Historical development observations recorded by the project author; latency and catalog availability may change. These are feedback, not claims about current service guarantees:
 
 1. **Reasoning is on by default and it eats `max_tokens`.** On Nano, Lightning and Super, a request with a modest `max_tokens` often came back with the budget spent on thinking and an empty or truncated answer. For agent and chat use cases, off by default (or a clear per-model note in the catalog) would save people a lot of debugging.
 2. **`/no_think` in the prompt does not work, but `chat_template_kwargs` does.** Sending `"chat_template_kwargs": {"enable_thinking": false}` turned reasoning off reliably. The `/no_think` system-prompt convention had no effect. This deserves a line in the Token Factory docs for each Nemotron model.

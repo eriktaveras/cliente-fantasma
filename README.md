@@ -11,6 +11,20 @@ Built for the **Nebius x NVIDIA Global AI Hackathon** (track: *Best Apps and Age
 
 ---
 
+## Try the demo / judging instructions
+
+- **Live app (English):** https://fantasma.eriktaveras.com/idioma/en?volver=/
+- **Read-only live example:** [October 14 Nebius run](https://fantasma.eriktaveras.com/b/7E2rUIHGg4a_4bO4K02oQ5ax) — fictitious business, 15/15 evaluated cases, observed cost US$0.464. This single measurement is not a runtime, cost or accuracy guarantee.
+- **Public source:** https://github.com/eriktaveras/cliente-fantasma · [MIT](LICENSE)
+- **Track:** Best Apps and Agents.
+- The demo uses HTTP Basic authentication. Judges must receive its credentials privately in the Devpost testing-instructions field; they are deliberately absent from this public repository. Any username works with the supplied demo password.
+- Choose **Create a test bot**, click **Use an example**, and continue. The sample is a fictitious corner store, so it requires no customer data or external webhook.
+- Review the business card, then choose **Light** and launch. Watch conversations and evaluations arrive, then open the report card. Inspect coverage and the quoted failures before interpreting the score; an interrupted or incomplete run cannot approve a bot. Copy/export controls are available on the report.
+- **Generated mode evaluates a newly generated example bot**, not a production WhatsApp integration. To evaluate an existing bot, use **Connect my bot** with the documented webhook contract below.
+- **How it works** lists the models currently configured. The hackathon deployment must keep NVIDIA Nemotron on Nebius Token Factory active throughout judging; running the optional local provider alone does not meet that requirement.
+- Daily/visitor budget limits may temporarily block new runs. The operator must provide judges with working access and sufficient budget through **December 15, 2026**; limits are not an excuse for an inaccessible submission.
+- Submission copy and remaining release items are in [the Devpost draft](docs/devpost.md). A public YouTube walkthrough under three minutes must be linked in the submission; no completed video is claimed here.
+
 ## The problem
 
 Small businesses in Latin America sell on WhatsApp. More and more of them are plugging an AI bot into that chat, usually built in an afternoon with n8n or a no-code tool, and then letting it loose on customers. Nobody tests it. The failures are expensive and quiet:
@@ -21,7 +35,7 @@ Small businesses in Latin America sell on WhatsApp. More and more of them are pl
 - **It does not hand off.** An angry customer or a wholesale buyer needs a human; the bot keeps chatting.
 - **It does not understand the customer.** Real customers write "klk, cuanto e el carton d huevo" in three split messages. Benchmarks are written in clean English.
 
-Cliente Fantasma ("Ghost Customer") gives the owner a report card in about three minutes, for well under a dollar.
+Cliente Fantasma ("Ghost Customer") generates an evidence-based report card. Runtime and cost depend on the model, the number of conversations and retries; the light run has a US$1 cap.
 
 ## How it works
 
@@ -110,7 +124,7 @@ Reasoning is controlled per role with `chat_template_kwargs: {"enable_thinking":
 
 The business card starts from what is public. With `TAVILY_API_KEY` set, `fantasma/ficha.py` calls Tavily **extract** on the URLs the owner gives (website, Instagram link page, menu) and Tavily **search** (`include_raw_content=markdown`, 5 results) on the business name, de-duplicating URLs. The owner's own pasted text always goes first and wins. If Tavily cannot read a page or is down, the run continues with the pasted text.
 
-Ultra then structures the material into the card under a hard rule: **no invented facts**. Code verifies it: any price not present as a number in the source material is rejected and the model retries with the list of problems (up to 3 times). Missing data (a product without a price, no delivery hours) is recorded as "missing", and the bot is then tested on *not* making it up.
+Ultra then structures the material into the card under a hard rule: **no invented facts**. Code checks product–price–currency associations against the supplied material and retries extraction when validation fails; merely finding the same number elsewhere in the source is insufficient. Missing data (a product without a price, no delivery hours) is recorded as "missing", and the bot is then tested on *not* making it up.
 
 ## Bring your bot
 
@@ -137,9 +151,9 @@ You do not need to rebuild your bot. Point Cliente Fantasma at a webhook and the
 - The URL is typed by strangers into a public app, so it is guarded against SSRF: HTTPS only, every resolved IP must be global (private, loopback, link-local/cloud metadata, CGNAT are rejected), the connection is pinned to the validated IP (no DNS rebinding), no redirects, 16 KB response cap (replies are trimmed to 2,000 characters before the ghost and the judge see them), total timeout.
 - To test a bot running on your own machine, set `remoto_inseguro: true` in `config.yaml`: it allows `http://` and private addresses. Never turn it on in a public deployment.
 
-## Real costs
+## Historical Nebius measurements
 
-Measured on Nebius Token Factory with a Dominican *colmado* (corner store) as the test business:
+These are historical measurements, not performance or invoice guarantees for the current build. Measured on Nebius Token Factory with a Dominican *colmado* (corner store) as the test business:
 
 | What | Cost | Time |
 |---|---|---|

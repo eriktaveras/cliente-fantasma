@@ -1,94 +1,61 @@
 {% extends "base.html" %}
 {% block pagina %}inicio{% endblock %}
 {% block contenido %}
-<section class="hero">
-  <div class="envoltura hero__rejilla">
-    <div class="hero__texto">
-      <p class="rotulo rotulo--verde">{{ t.inicio_rotulo }}</p>
-      <h1 class="titular titular--m hero__titular">{{ t.inicio_titular }}</h1>
-      <p class="bajada">{{ t.inicio_bajada }}</p>
-      <ol class="pasos">
-        {% for paso in t.inicio_pasos %}
-        <li class="pasos__item"><span class="pasos__n">{{ "%02d" | format(loop.index) }}</span>{{ paso }}</li>
-        {% endfor %}
-      </ol>
-      <dl class="cifras">
-        {% for valor, etiqueta in t.inicio_cifras %}
-        <div class="cifras__celda"><dt class="cifras__etiqueta">{{ etiqueta }}</dt><dd class="cifras__valor">{{ valor }}</dd></div>
-        {% endfor %}
-      </dl>
-    </div>
-
-    <form class="isla formulario" method="post" action="/probar" data-form-probar novalidate>
+<div class="envoltura pagina-inicio">
+  <header class="encabezado encabezado--inicio">
+    <p class="rotulo rotulo--verde">{{ t.ui.inicio_rotulo }}</p>
+    <h1 class="titular">{{ t.ui.inicio_titulo }}</h1>
+    <p class="bajada">{{ t.ui.inicio_bajada }}</p>
+    {% if nebius_nemotron %}<p class="tecnologia"><span class="tecnologia__punto"></span>{{ t.ui.inferencia }} <strong>NVIDIA Nemotron · Nebius Token Factory</strong><a href="/como-funciona">{{ t.ui.ver_modelos }} →</a></p>{% endif %}
+  </header>
+  <div class="inicio-layout">
+    <form class="isla formulario" method="post" action="/probar" data-form-probar>
       <div class="isla__bloque">
-        <p class="rotulo rotulo--verde">{{ t.form_rotulo }}</p>
-        <h2 class="formulario__titulo">{{ t.form_titulo }}</h2>
+        <div class="seccion-form__cabeza"><span class="numero-seccion">01</span><div><h2 class="formulario__titulo">{{ t.ui.elegir_bot }}</h2><p class="campo__pista">{{ t.ui.elegir_bot_pista }}</p></div></div>
         {% if error %}<p class="mensaje" role="alert">{{ error }}</p>{% endif %}
-
-        <fieldset class="opciones">
-          <legend class="campo__etiqueta">{{ t.form_modo }}</legend>
-          <label class="opcion">
-            <input class="opcion__control" type="radio" name="modo" value="generado" {% if datos.modo != "remoto" %}checked{% endif %} data-modo>
-            <span class="opcion__texto"><strong>{{ t.modo_generado }}</strong><span class="opcion__pista">{{ t.modo_generado_pista }}</span></span>
-          </label>
-          <label class="opcion">
-            <input class="opcion__control" type="radio" name="modo" value="remoto" {% if datos.modo == "remoto" %}checked{% endif %} data-modo>
-            <span class="opcion__texto"><strong>{{ t.modo_remoto }}</strong><span class="opcion__pista">{{ t.modo_remoto_pista }}</span></span>
-          </label>
+        <fieldset class="opciones opciones--modo">
+          <legend class="oculto-visual">{{ t.form_modo }}</legend>
+          <label class="opcion"><input class="opcion__control" type="radio" name="modo" value="generado" {% if datos.modo not in ('prompt', 'remoto') %}checked{% endif %} data-modo><span class="opcion__texto"><strong>{{ t.ui.modo_generado }}</strong><span class="opcion__pista">{{ t.ui.modo_generado_pista }}</span></span></label>
+          <label class="opcion"><input class="opcion__control" type="radio" name="modo" value="prompt" {% if datos.modo == 'prompt' %}checked{% endif %} data-modo><span class="opcion__texto"><strong>{{ t.ui.modo_prompt }}</strong><span class="opcion__pista">{{ t.ui.modo_prompt_pista }}</span></span></label>
+          <label class="opcion"><input class="opcion__control" type="radio" name="modo" value="remoto" {% if datos.modo == 'remoto' %}checked{% endif %} data-modo><span class="opcion__texto"><strong>{{ t.ui.modo_remoto }}</strong><span class="opcion__pista">{{ t.ui.modo_remoto_pista }}</span></span></label>
         </fieldset>
-
-        <div class="remoto" data-remoto>
-          <label class="campo">
-            <span class="campo__etiqueta">{{ t.campo_url_bot }}</span>
-            <input class="campo__entrada" name="url_bot" type="url" inputmode="url" maxlength="500" placeholder="https://" value="{{ datos.url_bot or '' }}" aria-describedby="pista-url-bot">
-            <span class="campo__pista" id="pista-url-bot">{{ t.campo_url_bot_pista }} <a class="enlace-texto" href="/n8n/conector.json" download>{{ t.descargar_conector }}</a></span>
-          </label>
-          <label class="campo">
-            <span class="campo__etiqueta">{{ t.campo_encabezados }}</span>
-            <textarea class="campo__entrada campo__entrada--suave campo__entrada--mono" name="encabezados" rows="2" maxlength="5500" placeholder="Authorization: Bearer ..." aria-describedby="pista-encabezados">{{ datos.encabezados or '' }}</textarea>
-            <span class="campo__pista" id="pista-encabezados">{{ t.campo_encabezados_pista }}</span>
-          </label>
+        <div class="remoto" data-panel-modo="prompt">
+          <label class="campo"><span class="campo__etiqueta">{{ t.campo_prompt }}</span><textarea class="campo__entrada campo__entrada--mono" name="prompt" rows="8" maxlength="{{ max_prompt_chars }}" data-obligatorio-modo aria-describedby="pista-prompt">{{ datos.prompt or '' }}</textarea><span class="campo__pista" id="pista-prompt">{{ t.campo_prompt_pista }} {{ t.campo_prompt_limite.format(max=max_prompt_chars) }}</span><span class="campo__pista">{{ t.campo_prompt_entorno }}</span></label>
         </div>
-
-        <label class="campo">
-          <span class="campo__etiqueta">{{ t.campo_nombre }}</span>
-          <input class="campo__entrada campo__entrada--suave" name="nombre" maxlength="200" autocomplete="organization" value="{{ datos.nombre or '' }}" aria-describedby="pista-nombre">
-          <span class="campo__pista" id="pista-nombre">{{ t.campo_nombre_pista }}</span>
-        </label>
-        {% if tavily %}
-        <label class="campo">
-          <span class="campo__etiqueta">{{ t.campo_urls }}</span>
-          <textarea class="campo__entrada campo__entrada--suave" name="urls" rows="2" maxlength="2600" inputmode="url" placeholder="https://" aria-describedby="pista-urls">{{ datos.urls or '' }}</textarea>
-          <span class="campo__pista" id="pista-urls">{{ t.campo_urls_pista }}</span>
-        </label>
-        {% endif %}
-        <label class="campo">
-          <span class="campo__etiqueta">{{ t.campo_texto }}</span>
-          <textarea class="campo__entrada" name="texto" rows="6" maxlength="20000"{% if not tavily %} required{% endif %} placeholder="{{ t.campo_texto_ejemplo }}" aria-describedby="pista-texto">{{ datos.texto or '' }}</textarea>
-          <span class="campo__pista" id="pista-texto">{{ t.campo_texto_pista }}</span>
-        </label>
+        <div class="remoto" data-panel-modo="remoto">
+          <label class="campo"><span class="campo__etiqueta">{{ t.campo_url_bot }}</span><input class="campo__entrada" name="url_bot" type="url" inputmode="url" maxlength="500" placeholder="https://…" value="{{ datos.url_bot or '' }}" data-obligatorio-modo aria-describedby="pista-url-bot"><span class="campo__pista" id="pista-url-bot">{{ t.ui.webhook_pista }} <a class="enlace-texto" href="/n8n/conector.json" download>{{ t.descargar_conector }}</a></span></label>
+          <details class="desplegable desplegable--compacto" {% if datos.encabezados %}open{% endif %}><summary>{{ t.ui.autenticacion }}</summary><label class="campo"><span class="campo__etiqueta">{{ t.campo_encabezados }}</span><textarea class="campo__entrada campo__entrada--mono" name="encabezados" rows="2" maxlength="5500" placeholder="Authorization: Bearer …" aria-describedby="pista-encabezados">{{ datos.encabezados or '' }}</textarea><span class="campo__pista" id="pista-encabezados">{{ t.campo_encabezados_pista }}</span></label></details>
+        </div>
       </div>
       <div class="isla__bloque">
-        <button class="boton boton--primario boton--bloque" type="submit" data-enviar>{{ t.boton_ficha }}</button>
-        <p class="espera" role="status" data-espera></p>
+        <div class="seccion-form__cabeza"><span class="numero-seccion">02</span><div><h2 class="formulario__titulo">{{ t.ui.datos_negocio }}</h2><p class="campo__pista">{{ t.ui.datos_pista }}</p></div></div>
+        <label class="campo"><span class="campo__etiqueta">{{ t.campo_nombre }} <span class="etiqueta-opcional">{{ t.ui.opcional }}</span></span><input class="campo__entrada" name="nombre" maxlength="200" autocomplete="organization" placeholder="{{ t.ui.nombre_ejemplo }}" value="{{ datos.nombre or '' }}"></label>
+        {% if tavily %}
+        <div class="fuente-selector" data-fuente-selector hidden aria-label="{{ t.ui.fuente }}"><button type="button" class="fuente-selector__boton" data-fuente="texto" aria-pressed="true">{{ t.ui.fuente_texto }}</button><button type="button" class="fuente-selector__boton" data-fuente="web" aria-pressed="false">{{ t.ui.fuente_web }}</button></div>
+        <div data-panel-fuente="web"><label class="campo"><span class="campo__etiqueta">{{ t.campo_urls }}</span><textarea class="campo__entrada" name="urls" rows="2" maxlength="2600" inputmode="url" placeholder="https://…" aria-describedby="pista-urls">{{ datos.urls or '' }}</textarea><span class="campo__pista" id="pista-urls">{{ t.campo_urls_pista }}</span></label></div>
+        {% endif %}
+        <div data-panel-fuente="texto">
+          <div class="campo__cabecera"><label class="campo__etiqueta" for="info-negocio">{{ t.ui.informacion }}</label><button class="enlace-texto ejemplo" type="button" data-ejemplo hidden>{{ t.ui.usar_ejemplo }}</button></div>
+          <textarea class="campo__entrada" id="info-negocio" name="texto" rows="6" maxlength="20000"{% if not tavily %} required{% endif %} placeholder="{{ t.campo_texto_ejemplo }}" aria-describedby="pista-texto">{{ datos.texto or '' }}</textarea>
+          <p class="campo__pista" id="pista-texto">{{ t.ui.texto_pista }}</p>
+        </div>
       </div>
+      <div class="isla__bloque formulario__acciones"><p class="siguiente-paso">{{ icono('check') }}{{ t.ui.antes_de_lanzar }}</p><button class="boton boton--primario boton--bloque" type="submit" data-enviar>{{ t.ui.continuar }}{{ icono('flecha') }}</button><p class="espera" role="status" data-espera></p></div>
     </form>
+    <aside class="inicio-contexto">
+      <section class="vista-ejemplo">
+        <div class="vista-ejemplo__cabeza"><span class="mini-fantasma">{{ icono('fantasma') }}</span><div><p class="rotulo">{{ t.ui.ejemplo_rotulo }}</p><h2>{{ t.ui.ejemplo_titulo }}</h2></div><span class="etiqueta-opcional">{{ t.ui.ejemplo }}</span></div>
+        <div class="vista-ejemplo__chat"><p class="ejemplo-mensaje ejemplo-mensaje--cliente">{{ t.ui.chat_cliente }}</p><p class="ejemplo-mensaje ejemplo-mensaje--bot">{{ t.ui.chat_bot }}</p><div class="hallazgo-ejemplo">{{ icono('escudo') }}<p><strong>{{ t.ui.chat_hallazgo }}</strong><span>{{ t.ui.chat_explicacion }}</span></p></div></div>
+        <div class="vista-ejemplo__pie"><span class="punto-alerta"></span>{{ t.ui.ejemplo_aclaracion }}</div>
+      </section>
+      <section class="obtendras"><p class="rotulo">{{ t.ui.obtendras }}</p><ul>{% for titulo, descripcion in t.ui.beneficios %}<li><span class="obtendras__check">{{ icono('check') }}</span><div><strong>{{ titulo }}</strong><p>{{ descripcion }}</p></div></li>{% endfor %}</ul></section>
+      <p class="privacidad">{{ icono('escudo') }}{{ t.ui.privacidad }}</p>
+    </aside>
   </div>
-</section>
-
-{% if previas %}
-<section class="envoltura seccion seccion--corta" aria-labelledby="tus-pruebas">
-  <h2 class="rotulo" id="tus-pruebas">{{ t.tus_pruebas }}</h2>
-  <ul class="lista-pruebas">
-    {% for p in previas %}
-    <li>
-      <a class="fila" href="/corrida/{{ p.id }}/{{ 'ficha' if p.estado == 'ficha' else ('boleta' if p.estado in ('terminada', 'presupuesto') else 'vivo') }}">
-        <span class="fila__nombre">{{ p.negocio or p.id }}</span>
-        <span class="pildora pildora--chica {{ 'pildora--verde' if p.estado == 'terminada' else ('pildora--rojo' if p.estado == 'error' else 'pildora--ambar') }}"><span class="pildora__punto"></span>{{ t.estados[p.estado] }}</span>
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
-</section>
-{% endif %}
+  <section class="seccion historial" aria-labelledby="tus-pruebas">
+    <div class="seccion__cabeza"><div><p class="rotulo">{{ t.ui.continuar_trabajo }}</p><h2 class="titular-seccion" id="tus-pruebas">{{ t.ui.historial }}</h2></div><span class="dato">{{ previas | length }} {{ t.ui.recientes }}</span></div>
+    {% if previas %}<ul class="lista-pruebas">{% for p in previas %}<li><a class="prueba-reciente" href="/corrida/{{ p.id }}/{{ 'ficha' if p.estado == 'ficha' else ('boleta' if p.estado in ('terminada', 'presupuesto') else 'vivo') }}"><span class="prueba-reciente__icono">{{ icono('informe') }}</span><span class="prueba-reciente__nombre"><strong>{{ p.negocio or p.id }}</strong><span>{{ t.ui.reanudar_ficha if p.estado == 'ficha' else t.ui.abrir_prueba }}</span></span><span class="pildora pildora--chica {{ 'pildora--verde' if p.estado == 'terminada' else ('pildora--rojo' if p.estado == 'error' else 'pildora--ambar') }}"><span class="pildora__punto"></span>{{ t.estados[p.estado] }}</span>{{ icono('flecha') }}</a></li>{% endfor %}</ul>
+    {% else %}<div class="historial__vacio">{{ icono('informe') }}<p>{{ t.ui.historial_vacio }}</p></div>{% endif %}
+  </section>
+</div>
 {% endblock %}

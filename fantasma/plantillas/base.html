@@ -1,3 +1,18 @@
+{% macro icono(nombre, clase='icono') -%}
+<svg class="{{ clase }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if nombre == 'fantasma' %}<path d="M5 20V10a7 7 0 0 1 14 0v10l-3-2-4 2-4-2-3 2Z"/><path d="M9 10h.01M15 10h.01" stroke-width="3"/><path d="M10 14h4"/>
+{% elif nombre == 'menu' %}<path d="M4 6h16M4 12h16M4 18h16"/>
+{% elif nombre == 'mas' %}<path d="M12 5v14M5 12h14"/>
+{% elif nombre == 'flecha' %}<path d="M5 12h14m-6-6 6 6-6 6"/>
+{% elif nombre == 'check' %}<path d="m5 12 4 4L19 6"/>
+{% elif nombre == 'informe' %}<path d="M8 3h8l4 4v14H4V3h4Zm7 0v5h5M8 12h8M8 16h5"/>
+{% elif nombre == 'ayuda' %}<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16h.01"/>
+{% elif nombre == 'escudo' %}<path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/>
+{% else %}<circle cx="12" cy="12" r="8"/><path d="M12 8v5M12 16h.01"/>{% endif %}
+</svg>
+{%- endmacro %}
+{% set actual = self.pagina() | trim %}
+{% set etapa = {'inicio': 0, 'ficha': 1, 'vivo': 2, 'boleta': 3}.get(actual, -1) %}
 <!DOCTYPE html>
 <html lang="{{ t.html_lang }}">
 <head>
@@ -6,43 +21,69 @@
   <title>{% block titulo %}{{ t.inicio_titulo_pagina }}{% endblock %}</title>
   <meta name="description" content="{{ t.inicio_descripcion }}">
   {% block meta %}{% endblock %}
-  <meta name="theme-color" content="#F1F2EE">
+  <meta name="theme-color" content="#153c32">
   <link rel="icon" href="/static/marca/taveras-favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&amp;family=Hanken+Grotesk:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@400;500;600;700&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
   <link rel="stylesheet" href="/static/css/taller.css">
-  <link rel="stylesheet" href="/static/css/fantasma.css?v=1">
+  <link rel="stylesheet" href="/static/css/fantasma.css?v=2">
   <script type="application/json" id="textos">{{ textos_js | tojson }}</script>
-  <script src="/static/js/fantasma.js?v=1" defer></script>
+  <script src="/static/js/fantasma.js?v=2" defer></script>
 </head>
-<body data-pagina="{% block pagina %}{% endblock %}">
+<body class="aplicacion {{ 'aplicacion--publica' if publica|default(false) else '' }}" data-pagina="{% block pagina %}{% endblock %}">
   <a class="saltar" href="#principal">{{ t.saltar }}</a>
-
-  <header class="cabecera">
-    <div class="envoltura cabecera__fila">
-      <a class="cabecera__marca" href="/">
-        <span class="marca__cuadro" aria-hidden="true"></span>
-        <span class="cabecera__nombre">{{ t.marca }}</span>
-      </a>
-      <nav class="cabecera__nav" aria-label="{{ t.marca }}">
-        <a class="cabecera__enlace" href="/como-funciona">{{ t.nav_como }}</a>
-        <a class="cabecera__idioma" href="/idioma/{{ otro_idioma }}?volver={{ request.url.path | urlencode }}" lang="{{ otro_idioma }}" hreflang="{{ otro_idioma }}">
-          <span aria-hidden="true">{{ t.otro_idioma_corto }}</span><span class="oculto-visual">{{ t.otro_idioma }}</span>
-        </a>
+  {% if not publica|default(false) %}
+  <aside class="lateral" aria-label="{{ t.ui.navegacion }}">
+    <a class="identidad" href="/">{{ icono('fantasma', 'identidad__simbolo') }}<span>Cliente<span class="identidad__nombre">Fantasma<span class="identidad__punto">.</span></span></span></a>
+    <p class="lateral__rotulo">{{ t.ui.espacio }}</p>
+    <nav class="lateral__nav">
+      <a class="lateral__enlace {{ 'lateral__enlace--activo' if actual in ('inicio', 'ficha', 'vivo') }}" href="/" {% if actual == 'inicio' %}aria-current="page"{% endif %}>{{ icono('mas') }}{{ t.ui.nuevo }}</a>
+      <a class="lateral__enlace {{ 'lateral__enlace--activo' if actual == 'boleta' }}" href="/#tus-pruebas">{{ icono('informe') }}{{ t.ui.historial }}</a>
+      <a class="lateral__enlace {{ 'lateral__enlace--activo' if actual == 'como' }}" href="/como-funciona" {% if actual == 'como' %}aria-current="page"{% endif %}>{{ icono('ayuda') }}{{ t.nav_como }}</a>
+    </nav>
+    <div class="lateral__nota">{{ icono('escudo') }}<p>{{ t.ui.nota_lateral }}</p><span class="lateral__linea"></span><p class="lateral__firma">TAVERAS SOLUTIONS</p></div>
+  </aside>
+  {% endif %}
+  <div class="espacio">
+    <header class="cabecera">
+      <div class="cabecera__fila">
+        <a class="marca-movil" href="/">{{ icono('fantasma') }}<span>Cliente Fantasma</span></a>
+        <span class="cabecera__contexto">{{ t.ui.informe_compartido if publica|default(false) else t.ui.espacio }}</span>
+        <div class="cabecera__derecha">
+          {% if not publica|default(false) %}
+          <details class="menu-movil">
+            <summary aria-label="{{ t.ui.navegacion }}">{{ icono('menu') }}</summary>
+            <nav aria-label="{{ t.ui.navegacion }}">
+              <a href="/">{{ t.ui.nuevo }}</a>
+              <a href="/#tus-pruebas">{{ t.ui.historial }}</a>
+              <a href="/como-funciona">{{ t.nav_como }}</a>
+            </nav>
+          </details>
+          {% endif %}
+          <span class="entorno"><span></span>{{ t.ui.entorno }}</span>
+          <a class="cabecera__idioma" href="/idioma/{{ otro_idioma }}?volver={{ request.url.path | urlencode }}" lang="{{ otro_idioma }}" hreflang="{{ otro_idioma }}"><span>{{ t.otro_idioma_corto }}</span><span class="oculto-visual">{{ t.otro_idioma }}</span></a>
+        </div>
+      </div>
+    </header>
+    <main id="principal" class="principal" tabindex="-1">
+      {% if etapa >= 0 and not publica|default(false) %}
+      <nav class="recorrido envoltura" aria-label="{{ t.ui.progreso }}">
+        <ol>
+          {% for nombre in t.ui.pasos %}
+          {% set numero = loop.index0 %}
+          <li class="recorrido__paso {{ 'recorrido__paso--hecho' if numero < etapa }} {{ 'recorrido__paso--actual' if numero == etapa }}" {% if numero == etapa %}aria-current="step"{% endif %}>
+            <span class="recorrido__numero">{% if numero < etapa %}{{ icono('check') }}{% else %}{{ loop.index }}{% endif %}</span>
+            <span>{{ nombre }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+        <span class="recorrido__detalle">{{ t.ui.paso_de.format(n=etapa+1, total=4) }}</span>
       </nav>
-    </div>
-  </header>
-
-  <main id="principal" class="principal" tabindex="-1">
-    {% block contenido %}{% endblock %}
-  </main>
-
-  <footer class="pie">
-    <div class="envoltura pie__fila">
-      <span class="marca__cuadro" aria-hidden="true"></span>
-      <span class="pie__texto">{{ t.pie }}</span>
-    </div>
-  </footer>
+      {% endif %}
+      {% block contenido %}{% endblock %}
+    </main>
+    <footer class="pie"><span>{{ t.pie }}</span><span>{{ t.ui.pie_nota }}</span></footer>
+  </div>
 </body>
 </html>

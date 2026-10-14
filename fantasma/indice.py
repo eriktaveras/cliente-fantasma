@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-Modo = Literal["generado", "remoto"]
+Modo = Literal["generado", "prompt", "remoto"]
 Tamaño = Literal["ligera", "completa"]
 Estado = Literal["investigando", "ficha", "generando", "corriendo", "terminada", "presupuesto", "error"]
 ACTIVOS: tuple[Estado, ...] = ("investigando", "generando", "corriendo")

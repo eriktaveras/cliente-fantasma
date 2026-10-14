@@ -648,8 +648,15 @@ async def generar_prompt(llm, rubro: RubroSpec, reglas: list[Regla], caja: Caja)
 # ---------------------------------------------------------------- orquestación
 
 
-async def generar_spec(llm, config: Config, rubro: RubroSpec, progreso: Progreso = None, datos: DatosRubro | None = None) -> Spec:
-    """`datos` ya dados (los de la ficha del negocio) no se generan: un catálogo inventado no sirve de verdad para juzgar."""
+async def generar_spec(
+    llm,
+    config: Config,
+    rubro: RubroSpec,
+    progreso: Progreso = None,
+    datos: DatosRubro | None = None,
+    prompt_base: str | None = None,
+) -> Spec:
+    """`datos` ya dados no se generan; `prompt_base` fija las instrucciones base que ejecutará el entorno de prueba."""
     if datos is None:
         _avisar(progreso, "generando datos del rubro")
         datos = await generar_datos(llm, rubro, progreso)
@@ -660,7 +667,11 @@ async def generar_spec(llm, config: Config, rubro: RubroSpec, progreso: Progreso
     caja = caja_para(rubro, datos)
     _avisar(progreso, "generando casos")
     casos = estratificar(await generar_casos(llm, rubro, rubro.reglas, caja, config.casos.cantidad, progreso), config.casos.holdout)
-    _avisar(progreso, "escribiendo prompt v000")
-    prompt = await generar_prompt(llm, rubro, rubro.reglas, caja)
+    if prompt_base is None:
+        _avisar(progreso, "escribiendo prompt v000")
+        prompt = await generar_prompt(llm, rubro, rubro.reglas, caja)
+    else:
+        _avisar(progreso, "usando las instrucciones del usuario como prompt v000")
+        prompt = prompt_base.strip()
     _avisar(progreso, f"spec lista: {len(datos.catalogo)} items, {len(rubro.reglas)} reglas, {len(rubrica.criterios)} criterios, {len(casos)} casos")
     return Spec(rubro=rubro, datos=datos, rubrica=rubrica, casos=casos, prompt_base=prompt)

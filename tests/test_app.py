@@ -6,11 +6,12 @@ import re
 import time
 from decimal import Decimal
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from fantasma import app as web
-from fantasma import costos
+from fantasma import costos, remoto
 from fantasma.eventos import Emisor
 from fantasma.servicio import Servicio
 from tests.test_servicio import COLMADO, RESPUESTA_BOT, LLMGuionado
@@ -31,6 +32,15 @@ def cliente(servicio, monkeypatch):
     monkeypatch.setattr(web, "LATIDO_S", 0.05)
     with TestClient(web.crear_app(servicio), headers=ORIGEN) as c:
         yield c
+
+
+@pytest.fixture
+def bot_remoto(monkeypatch):
+    async def resolver(host, puerto):
+        return ["93.184.216.34"]
+
+    monkeypatch.setattr(remoto, "resolver", resolver)
+    monkeypatch.setattr(remoto, "TRANSPORTE", httpx.MockTransport(lambda req: httpx.Response(200, json={"respuesta": RESPUESTA_BOT})))
 
 
 def crear(cliente, **form) -> str:
@@ -98,11 +108,11 @@ def test_como_funciona_muestra_configuracion_activa(cliente):
 
 
 def test_idioma_por_accept_language_y_selector(cliente):
-    assert "Let your bot fail" in cliente.get("/", headers={"accept-language": "en-US,en;q=0.9"}).text
-    assert "Que tu bot falle" in cliente.get("/", headers={"accept-language": "es-DO"}).text
+    assert "What do you have today?" in cliente.get("/", headers={"accept-language": "en-US,en;q=0.9"}).text
+    assert "¿Qué tienes hoy?" in cliente.get("/", headers={"accept-language": "es-DO"}).text
     r = cliente.get("/idioma/en?volver=/como-funciona", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/como-funciona"
-    assert "Five steps" in cliente.get("/como-funciona", headers={"accept-language": "es"}).text  # la cookie manda
+    assert "One reference, three starting points" in cliente.get("/como-funciona", headers={"accept-language": "es"}).text  # la cookie manda
     assert cliente.get("/idioma/es?volver=//malo.example", follow_redirects=False).headers["location"] == "/"
     assert cliente.get("/idioma/fr", follow_redirects=False).status_code == 404
 
@@ -119,6 +129,15 @@ def test_textos_con_las_mismas_claves_en_los_dos_idiomas():
     assert claves(web.TEXTOS["es"]) == claves(web.TEXTOS["en"])
     for k in web.TEXTOS_JS:
         assert k in web.TEXTOS["es"]
+
+
+def test_inicio_ofrece_tres_puntos_de_entrada_y_paneles_exclusivos(cliente):
+    html = cliente.get("/").text
+    assert html.count('name="modo"') == 3
+    assert all(f'value="{modo}"' in html for modo in ("generado", "prompt", "remoto"))
+    assert 'data-panel-modo="prompt"' in html and 'name="prompt"' in html
+    assert 'data-panel-modo="remoto"' in html and 'name="url_bot"' in html
+    assert "Los datos del negocio serán la referencia en los tres casos" in html
 
 
 # ---------------------------------------------------------------- flujo
@@ -151,10 +170,10 @@ def test_flujo_completo_ficha_vivo_boleta_publica(cliente, servicio):
     assert boleta.status_code == 200
     b = servicio.boleta(run_id)
     assert f">{b.mejor.nota}<" in boleta.text and "AQUÍ FALLÓ" in boleta.text and RESPUESTA_BOT in boleta.text
-    assert {"Listo para atender", "Necesita ajustes", "No lo sueltes"} & {x for x in re.findall(r"</span>([^<]+)</p>", boleta.text)}
+    assert {"Aprobó esta prueba", "Requiere ajustes", "No superó esta prueba"} & {x for x in re.findall(r"</span>([^<]+)</p>", boleta.text)}
     assert "conversaciones.jsonl" in boleta.text
     # Modo generado: no hay bot del dueño; la nota es del bot de prueba y el entregable es el prompt.
-    assert "armamos uno de prueba" in boleta.text and "TU SYSTEM PROMPT" in boleta.text and "ANTES Y DESPUÉS" not in boleta.text
+    assert "prototipo creado con la ficha" in boleta.text and "INSTRUCCIONES PARA IMPLEMENTAR" in boleta.text and "ANTES Y DESPUÉS" not in boleta.text
     token = servicio.indice.obtener(run_id).token_publico
     assert f"http://testserver/b/{token}" in boleta.text
 
@@ -173,7 +192,60 @@ def test_boleta_en_ingles(cliente, servicio):
     lanzar(cliente, servicio, run_id)
     html = cliente.get(f"/corrida/{run_id}/boleta", headers={"accept-language": "en"}).text
     assert "FAILED HERE" in html and "Score by kind of ghost" in html and "Dominican Republic" in html
-    assert "YOUR SYSTEM PROMPT" in html and "test bot" in html
+    assert "INSTRUCTIONS TO IMPLEMENT" in html and "prototype" in html
+
+
+def test_modo_prompt_exige_y_conserva_instrucciones_en_ambos_formularios(cliente, servicio):
+    r = cliente.post("/probar", data={"modo": "prompt", "texto": COLMADO, "prompt": "   "})
+    assert r.status_code == 400 and "Pega las instrucciones" in r.text
+
+    prompt = "Eres el asistente del colmado. MARCA-INTERNA-9831. Consulta el catálogo antes de responder."
+    run_id = crear(cliente, modo="prompt", prompt=prompt)
+    html = cliente.get(f"/corrida/{run_id}/ficha").text
+    assert prompt in html and 'value="prompt" checked' in html
+
+    r = cliente.post(f"/corrida/{run_id}/ficha", data=form_ficha(servicio, run_id, modo="prompt", prompt="", accion="lanzar"))
+    assert r.status_code == 400 and "Pega las instrucciones" in r.text
+    r = cliente.post(f"/corrida/{run_id}/ficha", data=form_ficha(servicio, run_id, modo="prompt", prompt=prompt, accion="guardar"), follow_redirects=False)
+    assert r.status_code == 303
+    cliente.app.state.pendientes.clear()
+    assert prompt in cliente.get(f"/corrida/{run_id}/ficha").text
+    r = cliente.post(f"/corrida/{run_id}/ficha", data=form_ficha(servicio, run_id, modo="prompt", prompt=prompt, accion="lanzar"), follow_redirects=False)
+    assert r.status_code == 303
+    esperar(cliente, run_id)
+    boleta = cliente.get(f"/corrida/{run_id}/boleta").text
+    assert "COMPARACIÓN DEL PROMPT" in boleta and "VERSIÓN DE TUS INSTRUCCIONES" in boleta
+    assert "herramientas simuladas" in boleta and "bot tuyo" not in boleta and "MARCA-INTERNA-9831" in boleta
+    token = servicio.indice.obtener(run_id).token_publico
+    publica = TestClient(cliente.app).get(f"/b/{token}").text
+    assert "MARCA-INTERNA-9831" not in publica and RESPUESTA_BOT not in publica
+    assert "solo aparecen en la boleta privada" in publica
+
+
+def test_modo_desconocido_no_se_degrada_a_generado(cliente, servicio):
+    r = cliente.post("/probar", data={"modo": "misterio", "texto": COLMADO})
+    assert r.status_code == 400 and "tres puntos de partida" in r.text
+    run_id = crear(cliente)
+    r = cliente.post(f"/corrida/{run_id}/ficha", data=form_ficha(servicio, run_id, modo="misterio"))
+    assert r.status_code == 400 and "tres puntos de partida" in r.text
+
+
+def test_remoto_es_auditoria_sin_antes_despues_ni_arreglo_validado(cliente, servicio, bot_remoto):
+    url = "https://bot.ejemplo.com/webhook"
+    run_id = crear(cliente, modo="remoto", url_bot=url)
+    r = cliente.post(
+        f"/corrida/{run_id}/ficha",
+        data=form_ficha(servicio, run_id, modo="remoto", url_bot=url, accion="lanzar"),
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    esperar(cliente, run_id)
+    html = cliente.get(f"/corrida/{run_id}/boleta").text
+    assert "AUDITORÍA DEL BOT" in html and "RECOMENDACIONES" in html
+    assert "no se instaló ni se validó" in html
+    assert "ANTES Y DESPUÉS" not in html and "Prompt corregido" not in html
+    vivo = cliente.get(f"/corrida/{run_id}/vivo").text
+    assert 'data-modo="remoto"' in vivo and ">Mejora<" in vivo
 
 
 def test_sse_repite_lo_guardado_y_respeta_last_event_id(cliente, servicio):
@@ -332,3 +404,21 @@ def test_sin_tavily_solo_url_pide_texto(cliente, servicio, monkeypatch):
 def test_con_tavily_muestra_urls(cliente, monkeypatch):
     monkeypatch.setenv("TAVILY_API_KEY", "tvly-prueba")
     assert 'name="urls"' in cliente.get("/").text
+
+
+@pytest.mark.parametrize("endpoint,modelo,visible", [
+    ("https://api.tokenfactory.nebius.com/v1", "nvidia/Nemotron-3-Ultra-550b-a55b", True),
+    ("http://127.0.0.1:8081/v1", "nvidia/Nemotron-3-Ultra-550b-a55b", False),
+    ("https://api.tokenfactory.nebius.com.invalid/v1", "nvidia/Nemotron-3-Ultra-550b-a55b", False),
+    ("https://api.tokenfactory.nebius.com/v1", "ornith-1.5-35b", False),
+])
+def test_inicio_solo_atribuye_nebius_nemotron_a_config_real(cliente, servicio, endpoint, modelo, visible):
+    from fantasma.motor.config import Proveedor
+
+    servicio.config_base.proveedores["demo"] = Proveedor(base_url=endpoint)
+    for rol in servicio.config_base.roles.values():
+        rol.proveedor = "demo"
+        rol.modelo = modelo
+    respuesta = cliente.get("/")
+    assert respuesta.status_code == 200
+    assert ("NVIDIA Nemotron · Nebius Token Factory" in respuesta.text) is visible

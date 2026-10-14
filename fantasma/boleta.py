@@ -30,10 +30,10 @@ SUGERENCIA = "sugerencia.json"
 
 Veredicto = Literal["listo", "ajustes", "no_lo_sueltes", "incompleta"]
 TEXTO_VEREDICTO: dict[str, str] = {
-    "listo": "Listo para atender",
+    "listo": "Aprobó esta prueba",
     "incompleta": "Evaluación incompleta",
-    "ajustes": "Necesita ajustes",
-    "no_lo_sueltes": "No lo sueltes",
+    "ajustes": "Requiere ajustes",
+    "no_lo_sueltes": "No superó esta prueba",
 }
 VERIFICACIONES = {
     "sin_inventos": "Inventó un dato (precio o producto que no está en la ficha)",
@@ -101,7 +101,7 @@ class Parche(BaseModel):
 class Boleta(BaseModel):
     run_id: str
     negocio: str
-    modo: Literal["generado", "remoto"]
+    modo: Literal["generado", "prompt", "remoto"]
     estado: str
     inicial: NotaVersion
     mejor: NotaVersion
@@ -125,6 +125,14 @@ def _por_caso(evals: list[EvaluacionRep]) -> dict[str, list[EvaluacionRep]]:
     return por_caso
 
 
+def _evaluaciones_validas(store: Store, spec: Spec, v: int) -> list[EvaluacionRep]:
+    config_path = store.dir / "config.yaml"
+    config = yaml.safe_load(config_path.read_text()) or {} if config_path.exists() else {}
+    reps = int(config.get("repetitions_per_case", 1))
+    casos = {c.id for c in spec.casos}
+    return [e for e in store.evaluaciones(v) if e.caso_id in casos and 0 <= e.repeticion < reps]
+
+
 def nota_version(store: Store, v: int) -> NotaVersion:
     """Sobre todas las conversaciones evaluadas de la versión (train y holdout): promedio por caso y luego entre casos."""
     spec = store.cargar_spec()
@@ -133,7 +141,7 @@ def nota_version(store: Store, v: int) -> NotaVersion:
     reps = int(config.get("repetitions_per_case", 1))
     solicitados = int(config.get("casos", {}).get("cantidad", len(spec.casos)))
     # Las repeticiones adicionales para medir ruido no forman parte de la nota de validación.
-    evals = [e for e in store.evaluaciones(v) if 0 <= e.repeticion < reps and any(c.id == e.caso_id for c in spec.casos)]
+    evals = _evaluaciones_validas(store, spec, v)
     por_caso = _por_caso(evals)
     return NotaVersion(
         version=v,
@@ -158,7 +166,7 @@ def veredicto(n: NotaVersion) -> Veredicto:
 def _criterios(store: Store, spec: Spec, antes: int, despues: int) -> list[NotaCriterio]:
     def medias(v: int) -> dict[str, int]:
         puntos: dict[str, list[int]] = defaultdict(list)
-        for e in store.evaluaciones(v):
+        for e in _evaluaciones_validas(store, spec, v):
             for p in e.juez.criterios if e.juez else []:
                 puntos[p.criterio].append(p.puntaje)
         return {k: round(100 * (mean(x) - 1) / 4) for k, x in puntos.items()}
@@ -171,7 +179,7 @@ def por_eje(store: Store, spec: Spec, v: int) -> dict[str, dict[str, int]]:
     """Nota por dialecto, ataque e intención: dónde se cae el bot (p. ej. bien con mexicanos, mal con dominicanos)."""
     casos = {c.id: c for c in spec.casos}
     grupos: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
-    for caso_id, es in _por_caso(store.evaluaciones(v)).items():
+    for caso_id, es in _por_caso(_evaluaciones_validas(store, spec, v)).items():
         for eje, valor in casos[caso_id].ejes.items():
             grupos[eje][valor].append(mean(e.puntaje for e in es))
     return {eje: {valor: round(100 * mean(x)) for valor, x in sorted(vals.items())} for eje, vals in grupos.items()}
@@ -272,7 +280,7 @@ def _que_fallo(e: EvaluacionRep, spec: Spec) -> tuple[str, str, bool]:
 
 def peores_fallas(store: Store, spec: Spec, v: int, n: int = PEORES) -> list[Falla]:
     casos: dict[str, Caso] = {c.id: c for c in spec.casos}
-    malas = [e for e in store.evaluaciones(v) if not e.paso]
+    malas = [e for e in _evaluaciones_validas(store, spec, v) if not e.paso]
     # Críticas primero; entre iguales, la de menor nota. Una por caso: tres fallas del mismo cliente no enseñan nada nuevo.
     malas.sort(key=lambda e: (not e.critica, e.puntaje, e.caso_id, e.repeticion))
     elegidas: list[tuple[EvaluacionRep, Transcripcion, str, str, int | None, str]] = []
@@ -324,8 +332,11 @@ def lineas_nuevas(antes: str, despues: str) -> str:
 
 
 def mejor_version(versiones: list[VersionPrompt]) -> int:
-    """La mejor por holdout entre base y aceptadas; si la corrida se cortó antes de medir holdout, v000."""
-    candidatas = [v for v in versiones if v.estado in ("base", "aceptada") and v.holdout is not None]
+    """La mejor aceptada que supera a v000 en holdout; un empate no demuestra mejora."""
+    base = next((v for v in versiones if v.n == 0 and v.holdout is not None), None)
+    if base is None:
+        return 0
+    candidatas = [v for v in versiones if v.estado == "aceptada" and v.holdout is not None and v.holdout > base.holdout]
     return max(candidatas, key=lambda v: (v.holdout, v.train or 0.0, v.n)).n if candidatas else 0
 
 

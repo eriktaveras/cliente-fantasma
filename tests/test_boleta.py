@@ -109,6 +109,18 @@ def test_criterios_antes_y_despues(store, spec, rubrica):
     assert por_id["veracidad"].critico
 
 
+def test_metricas_excluyen_repeticiones_de_ruido_consistentemente(store, spec, rubrica):
+    (store.dir / "config.yaml").write_text("repetitions_per_case: 1\n")
+    spec.casos[0].ejes = {"dialecto": "rd"}
+    store.guardar_spec(spec)
+    guardar(store, conversacion("a", "b"), evaluacion("busqueda-normal", 1.0, j=juez(rubrica, {"avance": 5})))
+    guardar(store, conversacion("a", "b", rep=1), evaluacion("busqueda-normal", 0.0, rep=1, j=juez(rubrica, {"avance": 1})))
+
+    assert boleta.nota_version(store, 0).nota == 100
+    assert {c.id: c for c in boleta._criterios(store, spec, 0, 0)}["avance"].antes == 100
+    assert boleta.por_eje(store, spec, 0)["dialecto"]["rd"] == 100
+
+
 # ---------------------------------------------------------------- fallas
 
 
@@ -126,8 +138,8 @@ def test_peores_fallas_criticas_primero_una_por_caso(store, spec, rubrica):
     assert [f.caso_id for f in fallas] == ["discriminatoria", "extraer-prompt", "busqueda-normal"]
     assert fallas[0].que_fallo == "Veracidad" and fallas[0].cita == "Claro, en Naco no hay extranjeros, te muestro." and fallas[0].turno == 1
     assert fallas[1].que_fallo.startswith("Inventó") and fallas[1].cita == "Cuesta US$1"
-    # De busqueda-normal sale la repetición peor (0.4), no la primera.
-    assert fallas[2].nota == 40 and fallas[2].que_fallo == "Avance" and not fallas[2].critica
+    # La repetición extra mide ruido y no puede contradecir la nota ni el listado principal de fallas.
+    assert fallas[2].nota == 60 and fallas[2].que_fallo == "Avance" and not fallas[2].critica
     assert [m.rol for m in fallas[0].conversacion] == ["cliente", "agente"]
 
 
@@ -141,6 +153,20 @@ def test_mejor_version_y_parche_generado(store, spec):
     p = boleta.parche(store, "generado", 1)
     assert p.tipo == "prompt_final" and p.cambio == "pide el presupuesto" and "+Pregunta el presupuesto." in p.diff
     assert boleta.mejor_version([VersionPrompt(n=0, estado="base")]) == 0
+
+
+def test_empate_en_holdout_no_se_presenta_como_mejora():
+    versiones = [
+        VersionPrompt(n=0, estado="base", train=0.5, holdout=0.7),
+        VersionPrompt(n=1, padre=0, estado="aceptada", train=0.9, holdout=0.7),
+    ]
+    assert boleta.mejor_version(versiones) == 0
+
+
+def test_parche_prompt_compara_con_las_instrucciones_del_usuario(store, spec):
+    store.guardar_version(VersionPrompt(n=1, padre=0, estado="aceptada", cambio="aclara el precio", train=0.8, holdout=0.7), spec.prompt_base + "\nAclara siempre la moneda.")
+    p = boleta.parche(store, "prompt", 1)
+    assert p.tipo == "prompt_final" and "+Aclara siempre la moneda." in p.diff
 
 
 def test_parche_remoto_lee_la_sugerencia(store):

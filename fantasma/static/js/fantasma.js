@@ -21,12 +21,17 @@ function usd(n) {
 
 // ------------------------------------------------------------ formularios comunes
 
-function alternarRemoto(form) {
-  const bloque = form.querySelector("[data-remoto]");
-  if (!bloque) return;
+function alternarModo(form) {
+  const paneles = form.querySelectorAll("[data-panel-modo]");
+  if (!paneles.length) return;
   const pintar = () => {
-    const remoto = form.querySelector("[data-modo]:checked")?.value === "remoto";
-    bloque.hidden = !remoto;
+    const modo = form.querySelector("[data-modo]:checked")?.value || "generado";
+    paneles.forEach((panel) => {
+      const activo = panel.dataset.panelModo === modo;
+      panel.hidden = !activo;
+      panel.querySelectorAll("input, textarea, select").forEach((c) => (c.disabled = !activo));
+      panel.querySelectorAll("[data-obligatorio-modo]").forEach((c) => (c.required = activo));
+    });
   };
   form.querySelectorAll("[data-modo]").forEach((r) => r.addEventListener("change", pintar));
   pintar();
@@ -34,6 +39,7 @@ function alternarRemoto(form) {
 
 function esperarAlEnviar(form, texto, soloSi) {
   form.addEventListener("submit", (e) => {
+    if (e.defaultPrevented) return;
     if (soloSi && !soloSi(e)) return;
     form.querySelectorAll("button[type=submit]").forEach((b) => {
       // Se deshabilita después del envío: deshabilitado antes, el navegador no manda el name/value del botón pulsado.
@@ -46,7 +52,43 @@ function esperarAlEnviar(form, texto, soloSi) {
 
 function inicio() {
   const form = document.querySelector("[data-form-probar]");
-  alternarRemoto(form);
+  alternarModo(form);
+  const texto = form.elements.texto;
+  const urls = form.elements.urls;
+  const ejemplo = form.querySelector("[data-ejemplo]");
+  const selector = form.querySelector("[data-fuente-selector]");
+  const fuentes = form.querySelectorAll("[data-fuente]");
+  const elegirFuente = (fuente) => {
+    fuentes.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.fuente === fuente)));
+    form.querySelectorAll("[data-panel-fuente]").forEach((p) => (p.hidden = p.dataset.panelFuente !== fuente));
+  };
+  if (selector) {
+    selector.hidden = false;
+    fuentes.forEach((b) => b.addEventListener("click", () => elegirFuente(b.dataset.fuente)));
+    elegirFuente(urls?.value.trim() && !texto.value.trim() ? "web" : "texto");
+  }
+  const actualizar = () => {
+    texto.setCustomValidity("");
+    if (ejemplo) ejemplo.hidden = Boolean(texto.value.trim());
+  };
+  texto.addEventListener("input", actualizar);
+  urls?.addEventListener("input", actualizar);
+  ejemplo?.addEventListener("click", () => {
+    if (texto.value.trim()) return;
+    texto.value = T.ui.ejemplo_texto;
+    if (!form.elements.nombre.value.trim()) form.elements.nombre.value = "Colmado La Esquina";
+    actualizar();
+    texto.focus();
+  });
+  actualizar();
+  form.addEventListener("submit", (e) => {
+    if (!texto.value.trim() && !urls?.value.trim()) {
+      e.preventDefault();
+      if (selector) elegirFuente("texto");
+      texto.setCustomValidity(T.ui.sin_material);
+      texto.reportValidity();
+    }
+  });
   esperarAlEnviar(form, T.esperando_ficha);
 }
 
@@ -54,7 +96,12 @@ function inicio() {
 
 function ficha() {
   const form = document.querySelector("[data-form-ficha]");
-  alternarRemoto(form);
+  const actualizarCatalogo = () => {
+    const contador = form.querySelector("[data-catalogo-count]");
+    if (contador) contador.textContent = "· " + [...form.querySelectorAll('[name="producto_nombre"]')].filter((c) => c.value.trim()).length;
+  };
+  form.addEventListener("input", actualizarCatalogo);
+  alternarModo(form);
   esperarAlEnviar(form, T.lanzando, (e) => e.submitter?.value === "lanzar");
 
   // Enter en un campo no lanza la prueba: el primer botón del formulario es "Lanzar" y cuesta dinero.
@@ -69,10 +116,13 @@ function ficha() {
         const fila = b.closest("[data-fila]");
         const lista = fila.parentElement;
         if (lista.querySelectorAll("[data-fila]").length > 1) {
+          const siguiente = fila.nextElementSibling || fila.previousElementSibling;
           fila.remove();
+          siguiente?.querySelector("input, textarea")?.focus();
         } else {
           fila.querySelectorAll("input, textarea").forEach((c) => (c.value = ""));
         }
+        actualizarCatalogo();
       });
     });
   };
@@ -83,7 +133,15 @@ function ficha() {
     const tipo = b.dataset.agregar;
     const lista = form.querySelector(`[data-lista="${tipo}"]`);
     const plantilla = form.querySelector(`[data-plantilla="${tipo}"]`);
+    const ultima = lista.lastElementChild;
+    if (ultima && [...ultima.querySelectorAll("input, textarea")].every((c) => !c.value.trim())) ultima.hidden = true;
     b.addEventListener("click", () => {
+      const vacia = lista.querySelector("[data-fila][hidden]");
+      if (vacia) {
+        vacia.hidden = false;
+        vacia.querySelector("input, textarea")?.focus();
+        return;
+      }
       const nueva = plantilla.content.firstElementChild.cloneNode(true);
       lista.appendChild(nueva);
       activarQuitar(nueva);
@@ -96,6 +154,7 @@ function ficha() {
 
 function vivo() {
   const raiz = document.querySelector("[data-vivo]");
+  const modo = raiz.dataset.modo;
   const contenedor = raiz.querySelector("[data-conversaciones]");
   const vacio = raiz.querySelector("[data-vacio]");
   const final = raiz.querySelector("[data-final]");
@@ -109,6 +168,27 @@ function vivo() {
   const grupos = new Map();
   const notas = new Map();
   let terminada = false;
+  let filtro = "todas";
+  const vacioFiltro = raiz.querySelector("[data-filtro-vacio]");
+  const filtros = raiz.querySelector("[data-filtros]");
+  function filtrar() {
+    let visibles = 0;
+    convs.forEach((c, clave) => {
+      c.li.hidden = filtro === "fallas" && (!notas.has(clave) || notas.get(clave).paso);
+      if (!c.li.hidden) visibles += 1;
+    });
+    grupos.forEach((lista) => (lista.parentElement.hidden = ![...lista.children].some((li) => !li.hidden)));
+    if (vacioFiltro) vacioFiltro.hidden = filtro !== "fallas" || visibles > 0;
+    if (vacio) vacio.hidden = filtro === "fallas" || convs.size > 0;
+  }
+  if (filtros) {
+    filtros.hidden = false;
+    filtros.querySelectorAll("[data-filtro]").forEach((b) => b.addEventListener("click", () => {
+      filtro = b.dataset.filtro;
+      filtros.querySelectorAll("[data-filtro]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      filtrar();
+    }));
+  }
 
   function marcarEtapa(i) {
     raiz.querySelectorAll("[data-etapa-paso]").forEach((p) => {
@@ -124,7 +204,8 @@ function vivo() {
     if (grupos.has(version)) return grupos.get(version);
     vacio.hidden = true;
     const seccion = el("section", "grupo");
-    const titulo = el("h2", "rotulo rotulo--verde grupo__titulo", version === 0 ? T.version_0 : T.version_n.replace("{n}", version));
+    const inicial = T["version_0_" + modo] || T.version_0;
+    const titulo = el("h2", "rotulo rotulo--verde grupo__titulo", version === 0 ? inicial : T.version_n.replace("{n}", version));
     const lista = el("ol", "grupo__lista");
     seccion.append(titulo, lista);
     // La versión más nueva arriba: es la que se está probando ahora.
@@ -159,6 +240,7 @@ function vivo() {
     const c = { li, chat, pie };
     convs.set(clave, c);
     cifra("n-conv").textContent = convs.size;
+    filtrar();
     return c;
   }
 
@@ -187,6 +269,7 @@ function vivo() {
     }
     cifra("n-eval").textContent = notas.size;
     cifra("n-pasan").textContent = [...notas.values()].filter((n) => n.paso).length;
+    filtrar();
   }
 
   function log(texto) {
@@ -231,7 +314,7 @@ function vivo() {
     version(ev) {
       if (ev.n > 0 && !terminada) {
         marcarEtapa(3);
-        etapaTexto.textContent = T.etapa_corrigiendo;
+        etapaTexto.textContent = T["etapa_corrigiendo_" + modo] || T.etapa_corrigiendo;
       }
     },
     costo: (ev) => (cifra("costo").textContent = usd(ev.usd)),

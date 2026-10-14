@@ -192,6 +192,33 @@ def test_flujo_generado_ficha_lanzar_boleta(servicio):
     assert len(lineas) >= 30 and {"version", "caso_id", "turnos", "juez", "ejes"} <= set(lineas[0])
 
 
+def test_flujo_prompt_usa_texto_usuario_como_v000(servicio):
+    prompt = "Eres el asistente del colmado. Consulta el catálogo y nunca inventes precios."
+    run_id, estado = correr(ficha_y_lanzar(servicio, "prompt", prompt_usuario=prompt))
+
+    assert estado == "terminada"
+    assert (servicio.raiz / run_id).stat().st_mode & 0o777 == 0o700
+    assert (servicio.raiz / run_id / "prompts" / "v000.md").read_text() == prompt
+    b = servicio.boleta(run_id)
+    assert b.modo == "prompt" and b.inicial.version == 0
+    assert b.parche.tipo in ("prompt_final", "sugerencia") and "prompt_antes.md" in b.parche.diff
+    assert "agente" in {rol for rol, _ in servicio.creados[-1].llamadas}
+
+
+def test_modo_prompt_exige_instrucciones_y_rechaza_modo_desconocido(servicio):
+    async def flujo():
+        run_id = await servicio.crear_ficha([], COLMADO, "1.2.3.4")
+        with pytest.raises(ValueError, match="necesita las instrucciones"):
+            await servicio.lanzar(run_id, "prompt", "ligera")
+        with pytest.raises(ValueError, match="desconocido"):
+            await servicio.lanzar(run_id, "otro", "ligera")
+        largo = "x" * (servicio.config_base.optimizacion.max_prompt_tokens * 4)
+        with pytest.raises(ValueError, match="superan el límite"):
+            await servicio.lanzar(run_id, "prompt", "ligera", prompt_usuario=largo)
+
+    correr(flujo())
+
+
 def test_eventos_de_la_corrida(servicio):
     run_id, _ = correr(ficha_y_lanzar(servicio))
     eventos = servicio.eventos.recientes(run_id)

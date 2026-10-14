@@ -59,7 +59,8 @@ NOMBRE_ENCABEZADO = re.compile(r"^[A-Za-z0-9-]{1,64}$")
 ESTADOS_ACTIVOS = ("investigando", "generando", "corriendo")
 # Lo que el JS necesita para pintar la vista en vivo y los botones de copiar.
 TEXTOS_JS = (
-    "etapas", "valores", "ejes", "cliente", "bot", "usa", "pasa", "falla", "critica", "version_0", "version_n",
+    "ui", "etapas", "valores", "ejes", "cliente", "bot", "usa", "pasa", "falla", "critica", "version_0", "version_n",
+    "version_0_generado", "version_0_prompt", "version_0_remoto", "etapa_corrigiendo_generado", "etapa_corrigiendo_prompt",
     "vivo_conectando", "vivo_conectado", "vivo_reconectando", "fin_terminada", "fin_presupuesto", "fin_error",
     "ver_boleta", "sin_boleta", "copiado", "copiar", "esperando_ficha", "lanzando", "etapa_investigando", "etapa_generando",
     "etapa_conversando", "etapa_sugerencia", "etapa_corrigiendo", "etapa_fin",
@@ -315,8 +316,28 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
         idioma = idioma_de(request)
         t = TEXTOS[idioma]
         textos_js = {k: t[k] for k in TEXTOS_JS}
+        config = srv(request).config_base
+        nebius_nemotron = any(
+            r.modelo.lower().startswith("nvidia/") and "nemotron" in r.modelo.lower()
+            and urlsplit(config.proveedor_de(rol).base_url).scheme == "https"
+            and urlsplit(config.proveedor_de(rol).base_url).hostname == "api.tokenfactory.nebius.com"
+            for rol, r in config.roles.items()
+        )
+        max_prompt_chars = int(config.optimizacion.max_prompt_tokens * 3.5)
         return plantillas.TemplateResponse(
-            request, nombre, {"t": t, "idioma": idioma, "otro_idioma": "en" if idioma == "es" else "es", "textos_js": textos_js, "tavily": hay_tavily(), **ctx}, status_code=status
+            request,
+            nombre,
+            {
+                "t": t,
+                "idioma": idioma,
+                "otro_idioma": "en" if idioma == "es" else "es",
+                "textos_js": textos_js,
+                "tavily": hay_tavily(),
+                "nebius_nemotron": nebius_nemotron,
+                "max_prompt_chars": max_prompt_chars,
+                **ctx,
+            },
+            status_code=status,
         )
 
     # -------------------------------------------- dueño de cada corrida: cookie firmada con los run_id de este navegador
@@ -399,7 +420,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
     async def probar(request: Request):
         form = await request.form()
         g = lambda k: str(form.get(k, "")).strip()
-        datos = {k: g(k) for k in ("modo", "nombre", "urls", "texto", "url_bot", "encabezados")}
+        datos = {k: g(k) for k in ("modo", "nombre", "urls", "texto", "prompt", "url_bot", "encabezados")}
         try:
             urls = lineas(datos["urls"])
             if len(urls) > MAX_URLS:
@@ -413,9 +434,14 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
                 raise Rechazo("err_sin_material")
             if not datos["texto"] and not hay_tavily():
                 raise Rechazo("err_sin_tavily")
-            modo = "remoto" if datos["modo"] == "remoto" else "generado"
+            modo = datos["modo"] or "generado"
+            if modo not in ("generado", "prompt", "remoto"):
+                raise Rechazo("err_modo")
+            datos["modo"] = modo
             encabezados = {}
-            if modo == "remoto":
+            if modo == "prompt":
+                validar_prompt(request, datos["prompt"])
+            elif modo == "remoto":
                 encabezados = encabezados_de(datos["encabezados"])
                 # Antes de pagar la ficha: una URL interna se rechazaría igual al lanzar.
                 await comprobar_bot(request, datos["url_bot"], encabezados)
@@ -433,7 +459,13 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
             return pagina(request, "inicio.html", 400, error=str(exc), previas=_previas(request), datos=datos)
         except ErrorTecnico:
             return pagina(request, "inicio.html", 502, error=TEXTOS[idioma_de(request)]["err_ficha_tecnico"], previas=_previas(request), datos=datos)
-        request.app.state.pendientes[run_id] = {"modo": modo, "url_bot": datos["url_bot"] if modo == "remoto" else "", "encabezados": encabezados}
+        request.app.state.pendientes[run_id] = {
+            "modo": modo,
+            "prompt": datos["prompt"] if modo == "prompt" else "",
+            "url_bot": datos["url_bot"] if modo == "remoto" else "",
+            "encabezados": encabezados,
+        }
+        srv(request).guardar_seleccion(run_id, modo, datos["prompt"], datos["url_bot"])
         r = RedirectResponse(f"/corrida/{run_id}/ficha", status_code=303)
         marcar_mia(request, r, run_id)
         return r
@@ -447,6 +479,13 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
         except (ErrorTecnico, ValueError) as exc:
             raise Rechazo("err_url_bot_rechazada", str(exc)) from None
 
+    def validar_prompt(request: Request, prompt: str) -> None:
+        if not prompt.strip():
+            raise Rechazo("err_prompt_vacio")
+        max_chars = int(srv(request).config_base.optimizacion.max_prompt_tokens * 3.5)
+        if len(prompt) > max_chars:
+            raise Rechazo("err_prompt_largo")
+
     def _mensaje(request: Request, r: Rechazo) -> str:
         clave, *args = r.args
         texto = TEXTOS[idioma_de(request)][clave]
@@ -454,7 +493,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
 
     def _vista_ficha(request: Request, run_id: str, status: int = 200, ficha: Any = None, **ctx: Any) -> HTMLResponse:
         s = srv(request)
-        pendiente = request.app.state.pendientes.get(run_id, {"modo": "generado", "url_bot": "", "encabezados": {}})
+        pendiente = {**s.seleccion(run_id), "encabezados": {}, **request.app.state.pendientes.get(run_id, {})}
         return pagina(
             request, "ficha.html", status, run_id=run_id, ficha=ficha or s.ficha(run_id), monedas=MONEDAS, tamaños=s.tamaños,
             pendiente=pendiente, encabezados_txt="\n".join(f"{k}: {v}" for k, v in pendiente["encabezados"].items()), **ctx,
@@ -474,21 +513,39 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
         s = srv(request)
         form = await request.form()
         accion = form.get("accion", "guardar")
-        modo = "remoto" if form.get("modo") == "remoto" else "generado"
+        modo = str(form.get("modo", ""))
         tamaño = "completa" if form.get("tamano") == "completa" else "ligera"
+        prompt = str(form.get("prompt", "")).strip()
         url_bot = str(form.get("url_bot", "")).strip()
         encabezados_txt = str(form.get("encabezados", ""))
         datos: dict | None = None
         try:
+            if modo not in ("generado", "prompt", "remoto"):
+                raise Rechazo("err_modo")
             datos = ficha_de_form(form, s.ficha(run_id))
             s.actualizar_ficha(run_id, datos)
             encabezados = encabezados_de(encabezados_txt) if modo == "remoto" else {}
-            request.app.state.pendientes[run_id] = {"modo": modo, "url_bot": url_bot if modo == "remoto" else "", "encabezados": encabezados}
+            request.app.state.pendientes[run_id] = {
+                "modo": modo,
+                "prompt": prompt if modo == "prompt" else "",
+                "url_bot": url_bot if modo == "remoto" else "",
+                "encabezados": encabezados,
+            }
+            if modo == "prompt":
+                validar_prompt(request, prompt)
+            s.guardar_seleccion(run_id, modo, prompt, url_bot)
             if accion != "lanzar":
                 return RedirectResponse(f"/corrida/{run_id}/ficha?guardada=1", status_code=303)
             if modo == "remoto" and not url_valida(url_bot, ("https", "http") if s.config_base.remoto_inseguro else ("https",)):
                 raise Rechazo("err_url_bot")
-            tarea = await s.lanzar(run_id, modo, tamaño, url_bot=url_bot or None, encabezados=encabezados or None)
+            tarea = await s.lanzar(
+                run_id,
+                modo,
+                tamaño,
+                url_bot=url_bot or None,
+                encabezados=encabezados or None,
+                prompt_usuario=prompt or None,
+            )
         except Rechazo as r:
             return _vista_ficha(request, run_id, 400, ficha=datos, error=_mensaje(request, r))
         except ValidationError as exc:
