@@ -76,7 +76,7 @@ function inicio() {
   ejemplo?.addEventListener("click", () => {
     if (texto.value.trim()) return;
     texto.value = T.ui.ejemplo_texto;
-    if (!form.elements.nombre.value.trim()) form.elements.nombre.value = "Colmado La Esquina";
+    if (!form.elements.nombre.value.trim()) form.elements.nombre.value = T.ui.ejemplo_nombre;
     actualizar();
     texto.focus();
   });

@@ -47,7 +47,7 @@
     "campo_urls_pista": "Su web o la página con precios. Una URL por línea, hasta 5.",
     "campo_texto": "O pega lo que vendes",
     "campo_texto_pista": "Productos con precio, horario, zonas de entrega, formas de pago. Hasta 20,000 caracteres.",
-    "campo_texto_ejemplo": "Colmado La Esquina, Villa Consuelo. Arroz RD$50 la libra, aceite RD$350 el litro. Abrimos de 7am a 10pm. Delivery en Villa Consuelo.",
+    "campo_texto_ejemplo": "Bluebird Store, tienda ficticia de accesorios en Austin, Estados Unidos. Botella de agua US$20, mochila US$35, taza US$12. Abrimos de lunes a sábado, de 9:00 a 18:00. Envío en Austin: US$5; pedido mínimo US$50.",
     "campo_url_bot": "URL del webhook de tu bot",
     "campo_url_bot_pista": "Solo https y en internet. Recibe {sesion, mensaje, historial} y responde {respuesta}.",
     "campo_encabezados": "Encabezados extra",
@@ -372,7 +372,7 @@
       "datos_negocio": "Cuéntanos sobre tu negocio",
       "datos_pista": "Estos datos serán la referencia para evaluar las respuestas.",
       "opcional": "Opcional",
-      "nombre_ejemplo": "Ej. Colmado La Esquina",
+      "nombre_ejemplo": "Ej. Bluebird Store",
       "fuente": "Fuente de información",
       "fuente_texto": "Pegar información",
       "fuente_web": "Usar una web",
@@ -384,10 +384,10 @@
       "ejemplo_rotulo": "LO QUE PUEDE DETECTAR",
       "ejemplo_titulo": "Una promesa que no toca",
       "ejemplo": "Ejemplo",
-      "chat_cliente": "¿Me lo mandan gratis si compro RD$150?",
-      "chat_bot": "¡Claro! El envío es gratis desde RD$150.",
+      "chat_cliente": "¿El envío es gratis si compro US$15?",
+      "chat_bot": "¡Claro! El envío es gratis desde US$15.",
       "chat_hallazgo": "Una condición inventada",
-      "chat_explicacion": "La ficha dice RD$500 como pedido mínimo. Esta respuesta necesita revisión.",
+      "chat_explicacion": "La ficha indica US$5 de envío y un pedido mínimo de US$50. El bot inventó el envío gratis.",
       "ejemplo_aclaracion": "Ejemplo ilustrativo, no es el resultado de tu bot.",
       "obtendras": "QUÉ TE LLEVAS",
       "beneficios": [
@@ -410,7 +410,7 @@
       "reanudar_ficha": "Continuar revisión",
       "abrir_prueba": "Ver análisis",
       "historial_vacio": "Tus análisis aparecerán aquí en este navegador cuando prepares tu primera prueba.",
-      "ejemplo_texto": "Colmado La Esquina, Villa Consuelo, Santo Domingo. Arroz RD$50 la libra, habichuelas RD$90 la libra, aceite RD$350 el litro. Abrimos de 7am a 10pm. Delivery en Villa Consuelo. Pedido mínimo RD$500. Pagos en efectivo o transferencia. No ofrecemos fiado.",
+      "ejemplo_texto": "Bluebird Store es una tienda ficticia de accesorios en Austin, Estados Unidos. Moneda: USD. Catálogo: botella de agua US$20 por unidad; mochila US$35 por unidad; taza US$12 por unidad. Horario: lunes a sábado de 9:00 a 18:00; cerrado los domingos. Envío solo dentro de Austin: US$5; pedido mínimo US$50. Pagos con tarjeta o transferencia bancaria. Devoluciones dentro de 30 días para productos sin usar. No ofrecemos descuentos ni promociones.",
       "sin_material": "Pega información del negocio o añade una web para continuar.",
       "revision_titulo": "Una buena prueba empieza con datos correctos.",
       "revision_bajada": "Esta ficha será la verdad de referencia. Las respuestas se evaluarán contra estos datos, incluidos precios y políticas.",
@@ -438,7 +438,8 @@
       "repetir": "Iniciar otro análisis",
       "editar_pendientes": "Editar datos pendientes",
       "inferencia": "Inferencia configurada:",
-      "ver_modelos": "Ver modelos y funcionamiento"
+      "ver_modelos": "Ver modelos y funcionamiento",
+      "ejemplo_nombre": "Bluebird Store"
     }
   },
   "en": {
@@ -489,7 +490,7 @@
     "campo_urls_pista": "Its website or the page with prices. One URL per line, up to 5.",
     "campo_texto": "Or paste what you sell",
     "campo_texto_pista": "Products with prices, opening hours, delivery areas, payment methods. Up to 20,000 characters. Spanish is fine.",
-    "campo_texto_ejemplo": "Colmado La Esquina, Villa Consuelo. Arroz RD$50 la libra, aceite RD$350 el litro. Abrimos de 7am a 10pm. Delivery en Villa Consuelo.",
+    "campo_texto_ejemplo": "Bluebird Store, a fictional accessories shop in Austin, United States. Water bottle US$20, backpack US$35, mug US$12. Open Monday to Saturday, 9am–6pm. Austin delivery: US$5; minimum order US$50.",
     "campo_url_bot": "Your bot's webhook URL",
     "campo_url_bot_pista": "Public https only. Receives {sesion, mensaje, historial} and replies {respuesta}.",
     "campo_encabezados": "Extra headers",
@@ -814,7 +815,7 @@
       "datos_negocio": "Tell us about your business",
       "datos_pista": "These facts will be the reference for grading responses.",
       "opcional": "Optional",
-      "nombre_ejemplo": "E.g. Colmado La Esquina",
+      "nombre_ejemplo": "E.g. Bluebird Store",
       "fuente": "Information source",
       "fuente_texto": "Paste information",
       "fuente_web": "Use a website",
@@ -826,10 +827,10 @@
       "ejemplo_rotulo": "WHAT IT CAN FIND",
       "ejemplo_titulo": "An unauthorized promise",
       "ejemplo": "Example",
-      "chat_cliente": "Can you deliver for free if I spend RD$150?",
-      "chat_bot": "Of course! Delivery is free from RD$150.",
+      "chat_cliente": "Is delivery free if I spend US$15?",
+      "chat_bot": "Of course! Delivery is free from US$15.",
       "chat_hallazgo": "An invented condition",
-      "chat_explicacion": "The business profile says RD$500 is the minimum order. This response needs review.",
+      "chat_explicacion": "The profile specifies US$5 delivery and a US$50 minimum order. The bot invented free delivery.",
       "ejemplo_aclaracion": "Illustrative example, not a result from your bot.",
       "obtendras": "WHAT YOU GET",
       "beneficios": [
@@ -852,7 +853,7 @@
       "reanudar_ficha": "Continue review",
       "abrir_prueba": "View analysis",
       "historial_vacio": "Your analyses will appear here in this browser after you prepare your first test.",
-      "ejemplo_texto": "Colmado La Esquina, Villa Consuelo, Santo Domingo. Arroz RD$50 la libra, habichuelas RD$90 la libra, aceite RD$350 el litro. Abrimos de 7am a 10pm. Delivery en Villa Consuelo. Pedido mínimo RD$500. Pagos en efectivo o transferencia. No ofrecemos fiado.",
+      "ejemplo_texto": "Bluebird Store is a fictional accessories shop in Austin, United States. Currency: USD. Catalog: water bottle US$20 per item; backpack US$35 per item; mug US$12 per item. Hours: Monday to Saturday, 9am–6pm; closed Sundays. Delivery within Austin only: US$5; minimum order US$50. Pay by card or bank transfer. Returns within 30 days for unused products. No discounts or promotions.",
       "sin_material": "Paste business information or add a website to continue.",
       "revision_titulo": "A good test starts with accurate facts.",
       "revision_bajada": "This profile is the ground truth. Responses will be evaluated against these facts, including prices and policies.",
@@ -880,7 +881,8 @@
       "repetir": "Start another analysis",
       "editar_pendientes": "Edit missing facts",
       "inferencia": "Configured inference:",
-      "ver_modelos": "See models and workflow"
+      "ver_modelos": "See models and workflow",
+      "ejemplo_nombre": "Bluebird Store"
     }
   }
 }
