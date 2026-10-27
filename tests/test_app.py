@@ -433,3 +433,17 @@ def test_inicio_solo_atribuye_nebius_nemotron_a_config_real(cliente, servicio, e
     respuesta = cliente.get("/app/nuevo")
     assert respuesta.status_code == 200
     assert ("NVIDIA Nemotron · Nebius Token Factory" in respuesta.text) is visible
+
+
+def test_rechazo_y_markdown_legibles_en_la_boleta():
+    en = web.TEXTOS["en"]
+    assert web.rechazo_legible("etapa A: 0.172 vs 0.349", en).startswith("On the quick check the candidate scored 17 vs 35")
+    assert web.rechazo_legible("etapa B: no mejora", en) == en["rechazo"]["etapa_b"]
+    assert web.rechazo_legible("algo interno", en) == en["rechazo"]["otro"]
+    assert web.sin_markdown("Llega en **1 y 2 días**\n- envío gratis") == "Llega en 1 y 2 días\n• envío gratis"
+
+
+def test_limite_sale_en_el_idioma_del_visitante(cliente, servicio):
+    servicio.corridas_por_dia = 0
+    r = cliente.post("/probar", data={"texto": COLMADO}, headers={"accept-language": "en"})
+    assert r.status_code == 429 and "analyses per day" in r.text and "pruebas por día" not in r.text

@@ -69,7 +69,11 @@ MOTIVOS = {"presupuesto": "rondas completadas", "meseta": "sin más mejoras", "l
 
 
 class Limite(Exception):
-    """Un tope de uso o de gasto: la app lo muestra como 429 con este mensaje."""
+    """Un tope de uso o de gasto: la app lo muestra como 429 con el texto `clave` de textos.json en el idioma del visitante."""
+
+    def __init__(self, clave: str, mensaje: str, **datos):
+        super().__init__(mensaje)
+        self.clave, self.datos = clave, datos
 
 
 class StoreObservado(Store):
@@ -142,13 +146,13 @@ class Servicio:
 
     def _verificar_limites(self, ip_hash: str) -> None:
         if self.indice.activas_de(ip_hash):
-            raise Limite("Ya tienes una prueba en curso: espera a que termine.")
+            raise Limite("err_limite_activa", "Ya tienes una prueba en curso: espera a que termine.")
         if self.indice.del_dia(ip_hash) >= self.corridas_por_dia:
-            raise Limite(f"Llegaste al máximo de {self.corridas_por_dia} pruebas por día.")
+            raise Limite("err_limite_dia", f"Llegaste al máximo de {self.corridas_por_dia} pruebas por día.", n=self.corridas_por_dia)
         if self.indice.gasto_del_dia() >= self.tope_diario:
-            raise Limite("La demo llegó a su tope de gasto de hoy. Vuelve mañana.")
+            raise Limite("err_tope_demo", "La demo llegó a su tope de gasto de hoy. Vuelve mañana.")
         if self.indice.gasto_del_dia_de(ip_hash) >= self.tope_ip:
-            raise Limite("Llegaste al tope de gasto por visitante de hoy. Vuelve mañana.")
+            raise Limite("err_tope_ip", "Llegaste al tope de gasto por visitante de hoy. Vuelve mañana.")
 
     def _config(self, modo: Modo, tamaño: Tamaño, url_bot: str | None, encabezados: dict[str, str] | None) -> Config:
         t = self.tamaños[tamaño]
@@ -263,11 +267,11 @@ class Servicio:
         if fila.estado != "ficha":
             raise ValueError(f"La corrida {run_id} no está esperando lanzamiento (estado {fila.estado})")
         if self.indice.activas_de(fila.ip_hash):
-            raise Limite("Ya tienes una prueba en curso: espera a que termine.")
+            raise Limite("err_limite_activa", "Ya tienes una prueba en curso: espera a que termine.")
         if self.indice.gasto_del_dia() >= self.tope_diario:
-            raise Limite("La demo llegó a su tope de gasto de hoy. Vuelve mañana.")
+            raise Limite("err_tope_demo", "La demo llegó a su tope de gasto de hoy. Vuelve mañana.")
         if self.indice.gasto_del_dia_de(fila.ip_hash) >= self.tope_ip:
-            raise Limite("Llegaste al tope de gasto por visitante de hoy. Vuelve mañana.")
+            raise Limite("err_tope_ip", "Llegaste al tope de gasto por visitante de hoy. Vuelve mañana.")
         if modo == "prompt" and not (prompt_usuario or "").strip():
             raise ValueError("El modo prompt necesita las instrucciones que quieres probar")
         if modo == "prompt" and tokens(prompt_usuario or "") > self.config_base.optimizacion.max_prompt_tokens:

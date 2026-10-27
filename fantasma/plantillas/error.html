@@ -7,6 +7,6 @@
   <p class="rotulo rotulo--verde">{{ t.error_titulo }}</p>
   <h1 class="titular titular--s">404</h1>
   <p class="parrafo">{{ mensaje }}</p>
-  <a class="boton boton--primario" href="/">{{ t.error_volver }}</a>
+  <a class="boton boton--primario" href="{{ '/app' if usuario else '/' }}">{{ t.error_volver }}</a>
 </div>
 {% endblock %}

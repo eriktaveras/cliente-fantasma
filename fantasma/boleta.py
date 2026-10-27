@@ -81,6 +81,8 @@ class Falla(BaseModel):
     ejes: dict[str, str]
     persona: str
     que_fallo: str
+    # Id del criterio o la verificación: la plantilla lo traduce; que_fallo queda como texto en español de respaldo.
+    que_id: str = ""
     motivo: str
     cita: str
     turno: int | None  # índice en `conversacion` del mensaje citado
@@ -257,26 +259,26 @@ def nombre_verificacion(id: str) -> str:
     return id
 
 
-def _que_fallo(e: EvaluacionRep, spec: Spec) -> tuple[str, str, bool]:
-    """(qué falló, por qué, si hay frase que citar). Orden: verificación crítica, violación crítica del juez, cualquier
+def _que_fallo(e: EvaluacionRep, spec: Spec) -> tuple[str, str, bool, str]:
+    """(qué falló, por qué, si hay frase que citar, id de lo que falló). Orden: verificación crítica, violación crítica del juez, cualquier
     verificación fallida (un caso puede no pasar solo por una expectativa aunque el juez dé 5) y el peor criterio del juez."""
     nombres = {c.id: c.nombre for c in spec.rubrica.criterios}
     ids_criticos = {c.id for c in spec.rubrica.criterios if c.critico}
     fallidas = [v for v in e.verificaciones if not v.ok]
 
-    def por_verificacion(v: Verificacion) -> tuple[str, str, bool]:
-        return nombre_verificacion(v.id), v.detalle, not v.id.startswith(SIN_CITA)
+    def por_verificacion(v: Verificacion) -> tuple[str, str, bool, str]:
+        return nombre_verificacion(v.id), v.detalle, not v.id.startswith(SIN_CITA), v.id
 
     if criticas := [v for v in fallidas if v.critica]:
         return por_verificacion(criticas[0])
     if e.juez and e.juez.critical_violation:
         criticos = [p for p in e.juez.criterios if p.criterio in ids_criticos]
         peor = min(criticos, key=lambda p: p.puntaje) if criticos else None
-        return (nombres[peor.criterio] if peor else "Violación crítica"), e.juez.critical_motivo or (peor.justificacion if peor else ""), True
+        return (nombres[peor.criterio] if peor else "Violación crítica"), e.juez.critical_motivo or (peor.justificacion if peor else ""), True, peor.criterio if peor else "violacion_critica"
     peor = min(e.juez.criterios, key=lambda p: p.puntaje) if e.juez else None
     if fallidas and (peor is None or peor.puntaje > 2):
         return por_verificacion(fallidas[0])
-    return nombres.get(peor.criterio, peor.criterio), peor.justificacion, True
+    return nombres.get(peor.criterio, peor.criterio), peor.justificacion, True, peor.criterio
 
 
 def peores_fallas(store: Store, spec: Spec, v: int, n: int = PEORES) -> list[Falla]:
@@ -294,13 +296,13 @@ def peores_fallas(store: Store, spec: Spec, v: int, n: int = PEORES) -> list[Fal
         if t is None or not any(x.rol == "agente" and x.texto.strip() for x in t.turnos):
             continue
         vistos.add(e.caso_id)
-        que, motivo, citable = _que_fallo(e, spec)
+        que, motivo, citable, que_id = _que_fallo(e, spec)
         turno, frase = cita(t, motivo) if citable else (None, "")
-        elegidas.append((e, t, que, motivo, turno, frase))
+        elegidas.append((e, t, que, que_id, motivo, turno, frase))
     # Las que traen la frase del bot van primero: es lo que convence. sort es estable y conserva el orden de gravedad.
-    elegidas.sort(key=lambda x: not x[5])
+    elegidas.sort(key=lambda x: not x[6])
     fallas: list[Falla] = []
-    for e, t, que, motivo, turno, frase in elegidas[:n]:
+    for e, t, que, que_id, motivo, turno, frase in elegidas[:n]:
         caso = casos[e.caso_id]
         fallas.append(
             Falla(
@@ -309,6 +311,7 @@ def peores_fallas(store: Store, spec: Spec, v: int, n: int = PEORES) -> list[Fal
                 ejes=caso.ejes,
                 persona=caso.persona.nombre,
                 que_fallo=que,
+                que_id=que_id,
                 motivo=motivo_legible(motivo),
                 cita=frase,
                 turno=turno,

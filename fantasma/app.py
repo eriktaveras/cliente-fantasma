@@ -202,6 +202,23 @@ def ficha_de_form(form, base: Ficha) -> dict:
     }
 
 
+def rechazo_legible(motivo: str, t: dict) -> str:
+    """El motivo interno del bucle ("etapa A: 0.172 vs 0.349") en palabras del dueño y en su idioma."""
+    r = t["rechazo"]
+    if m := re.match(r"etapa A: (\d+(?:\.\d+)?) vs (\d+(?:\.\d+)?)", motivo):
+        return r["etapa_a"].format(cand=round(100 * float(m[1])), act=round(100 * float(m[2])))
+    for prefijo, clave in (("etapa B", "etapa_b"), ("demasiado largo", "largo"), ("filtra", "filtra")):
+        if motivo.startswith(prefijo):
+            return r[clave]
+    return r["otro"]
+
+
+def sin_markdown(texto: str) -> str:
+    """Las respuestas del bot traen **negritas** y viñetas de markdown que en la boleta se verían crudas."""
+    texto = re.sub(r"(\*\*|__)(.+?)\1", r"\2", texto)
+    return re.sub(r"^\s*[-*]\s+", "• ", texto, flags=re.MULTILINE)
+
+
 def cookie_sesion(request: Request) -> str:
     return "__Host-fantasma_sesion" if es_https(request) else "fantasma_sesion"
 
@@ -323,6 +340,8 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
     app.add_middleware(Guardia)
     app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
     plantillas = Jinja2Templates(directory=BASE / "plantillas")
+    plantillas.env.filters["rechazo"] = rechazo_legible
+    plantillas.env.filters["sin_markdown"] = sin_markdown
 
     def srv(request: Request) -> Servicio:
         return request.app.state.servicio
@@ -595,9 +614,9 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
                 al_crear=lambda rid: request.app.state.cuentas.asociar(request.state.usuario["id"], [rid]),
             )
         except Limite as exc:
-            return pagina(request, "inicio.html", 429, error=str(exc), previas=_previas(request), datos=datos)
-        except PresupuestoAgotado as exc:
-            return pagina(request, "inicio.html", 429, error=str(exc), previas=_previas(request), datos=datos)
+            return pagina(request, "inicio.html", 429, error=_limite(request, exc), previas=_previas(request), datos=datos)
+        except PresupuestoAgotado:
+            return pagina(request, "inicio.html", 429, error=TEXTOS[idioma_de(request)]["err_tope_demo"], previas=_previas(request), datos=datos)
         except PrecioDesconocido:
             return pagina(request, "inicio.html", 503, error=TEXTOS[idioma_de(request)]["err_ficha_tecnico"], previas=_previas(request), datos=datos)
         except ValueError as exc:
@@ -632,6 +651,9 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
         max_chars = int(srv(request).config_base.optimizacion.max_prompt_tokens * 3.5)
         if len(prompt) > max_chars:
             raise Rechazo("err_prompt_largo")
+
+    def _limite(request: Request, exc: Limite) -> str:
+        return TEXTOS[idioma_de(request)][exc.clave].format(**exc.datos)
 
     def _mensaje(request: Request, r: Rechazo) -> str:
         clave, *args = r.args
@@ -699,7 +721,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
             detalle = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in exc.errors()[:3])
             return _vista_ficha(request, run_id, 422, ficha=datos, error=_mensaje(request, Rechazo("err_ficha", detalle)))
         except Limite as exc:
-            return _vista_ficha(request, run_id, 429, ficha=datos, error=str(exc))
+            return _vista_ficha(request, run_id, 429, ficha=datos, error=_limite(request, exc))
         except (ValueError, ErrorTecnico) as exc:
             return _vista_ficha(request, run_id, 400, ficha=datos, error=str(exc))
         request.app.state.pendientes.pop(run_id, None)

@@ -32,8 +32,8 @@
   <div class="final" data-final {% if activa %}hidden{% endif %}>
     {% if not activa %}
     <div class="aviso {{ 'aviso--rojo' if estado.estado == 'error' else ('aviso--ambar' if estado.estado == 'presupuesto' else 'aviso--verde') }} aviso--fila">
-      <p class="aviso__texto">{{ t.vivo_ya_termino }}{% if estado.motivo %} <span class="dato">{{ estado.motivo }}</span>{% endif %}</p>
-      {% if estado.evaluadas %}<a class="boton boton--primario" href="/corrida/{{ run_id }}/boleta">{{ t.ver_boleta }}</a>{% else %}<a class="boton" href="/">{{ t.probar_otro }}</a>{% endif %}
+      <p class="aviso__texto">{{ t.vivo_ya_termino }}</p>
+      {% if estado.evaluadas %}<a class="boton boton--primario" href="/corrida/{{ run_id }}/boleta">{{ t.ver_boleta }}</a>{% else %}<a class="boton" href="/app/nuevo">{{ t.probar_otro }}</a>{% endif %}
     </div>
     {% endif %}
   </div>

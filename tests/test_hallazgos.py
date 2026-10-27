@@ -89,11 +89,11 @@ def test_que_fallo_expectativa_no_critica_con_juez_perfecto(spec, rubrica):
         verificaciones=[Verificacion(id="esperado:llama:catalogo.buscar", ok=False, critica=False, detalle="no se llamó"), Verificacion(id="idioma", ok=True)],
         j=juez(rubrica, {}),
     )
-    assert boleta._que_fallo(e, spec) == ("No usó la herramienta para consultar el catálogo cuando tocaba", "no se llamó", False)
+    assert boleta._que_fallo(e, spec) == ("No usó la herramienta para consultar el catálogo cuando tocaba", "no se llamó", False, e.verificaciones[0].id)
     # Si el juez sí vio un criterio malo, manda el juez.
     c = rubrica.criterios[0]
     e.juez = juez(rubrica, {c.id: 2}, justificaciones={c.id: "turno 2: mal"})
-    assert boleta._que_fallo(e, spec) == (c.nombre, "turno 2: mal", True)
+    assert boleta._que_fallo(e, spec) == (c.nombre, "turno 2: mal", True, c.id)
 
 
 def test_parche_de_una_aceptada_sin_holdout_no_dice_que_se_rechazo(store, spec):

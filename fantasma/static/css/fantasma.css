@@ -14,7 +14,7 @@ body { font-size: 15px; line-height: 1.55; }
 [hidden] { display: none !important; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
-:focus-visible { outline: 3px solid #72bfa0; outline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--verde-ink); outline-offset: 3px; }
 .icono { width: 20px; height: 20px; flex: 0 0 auto; }
 .aplicacion { display: grid; grid-template-columns: 224px minmax(0, 1fr); }
 .lateral { background: #153c32; color: #ecf3ee; min-height: 100vh; position: sticky; top: 0; height: 100dvh; padding: 34px 20px 24px; display: flex; flex-direction: column; }
@@ -531,7 +531,7 @@ mark.burbuja__texto { color: var(--tinta); background: transparent; }
   .acceso { gap: 50px; grid-template-columns: 1fr 400px; }
   .panel__lista-cabeza { flex-wrap: wrap; }
   .panel__metricas>div { padding: 19px; }
-  .portada-cierre { margin-left: 28px; margin-right: 28px; }
+  .portada-cierre { width: auto; margin-left: 28px; margin-right: 28px; }
 }
 @media (max-width: 1000px) {
   .marketing-nav { display: none; }
@@ -561,7 +561,7 @@ mark.burbuja__texto { color: var(--tinta); background: transparent; }
   .portada-pasos { grid-template-columns: 1fr 1fr; gap: 25px; }
   .portada-evidencia, .portada-faq { grid-template-columns: 1fr; gap: 25px; }
   .portada-beneficios { grid-template-columns: 1fr; gap: 24px; }
-  .portada-cierre { margin: 20px 19px 30px; padding: 30px 25px; flex-direction: column; align-items: flex-start; gap: 25px; }
+  .portada-cierre { width: auto; margin: 20px 19px 30px; padding: 30px 25px; flex-direction: column; align-items: flex-start; gap: 25px; }
   .portada-cierre h2 { font-size: 29px; }
   .acceso { grid-template-columns: 1fr; padding-top: 30px; padding-bottom: 35px; gap: 27px; }
   .acceso__contexto { padding: 0; }

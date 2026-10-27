@@ -70,6 +70,7 @@
   <p class="rotulo rotulo--verde">{{ t.fallas_rotulo }}</p>
   <h2 class="titular-seccion" id="h-fallas">{{ t.fallas_titulo }}</h2>
   <p class="campo__pista">{{ t["fallas_contexto" ~ sfx] }}</p>
+  <p class="campo__pista">{{ t.nota_dialectos }}</p>
   {% if not boleta.fallas %}<p class="aviso aviso--verde">{{ t.sin_fallas }}</p>{% endif %}
   <ol class="fallas">
     {% for f in boleta.fallas %}
@@ -78,7 +79,7 @@
         <div class="falla__cabeza">
           <span class="falla__n">{{ loop.index }}</span>
           <div>
-            <h3 class="falla__que">{{ f.que_fallo }}</h3>
+            <h3 class="falla__que">{{ t.criterios.get(f.que_id) or t.verificaciones.get(f.que_id) or f.que_fallo }}</h3>
             <p class="dato">{{ f.persona }} · {{ f.nota }}/100{% if f.critica %} · <span class="texto-rojo">{{ t.critica }}</span>{% endif %}</p>
           </div>
         </div>
@@ -89,7 +90,7 @@
         </ul>
         {% if publica and prm %}<p class="aviso aviso--ambar espaciado-arriba">{{ t.evidencia_privada_prompt }}</p>
         {% else %}
-        {% if f.cita %}<blockquote class="cita"><p class="rotulo rotulo--chico texto-rojo">{{ t.aqui_fallo }}</p><p class="cita__texto">{{ f.cita }}</p></blockquote>{% endif %}
+        {% if f.cita %}<blockquote class="cita"><p class="rotulo rotulo--chico texto-rojo">{{ t.aqui_fallo }}</p><p class="cita__texto">{{ f.cita | sin_markdown }}</p></blockquote>{% endif %}
         <p class="falla__motivo"><span class="rotulo rotulo--chico">{{ t.por_que }}</span> {{ f.motivo }}</p>
         {% endif %}
       </div>
@@ -100,7 +101,7 @@
           {% for m in f.conversacion %}
           <li class="burbuja burbuja--{{ m.rol }} {{ 'burbuja--falla' if loop.index0 == f.turno }}" {% if loop.index0 == f.turno %}data-falla{% endif %}>
             <span class="oculto-visual">{{ t.cliente if m.rol == "cliente" else t.bot }}:</span>
-            {% if loop.index0 == f.turno %}<span class="burbuja__marca">{{ t.aqui_fallo }}</span><mark class="burbuja__texto">{{ m.texto }}</mark>{% else %}<span class="burbuja__texto">{{ m.texto }}</span>{% endif %}
+            {% if loop.index0 == f.turno %}<span class="burbuja__marca">{{ t.aqui_fallo }}</span><mark class="burbuja__texto">{{ m.texto | sin_markdown }}</mark>{% else %}<span class="burbuja__texto">{{ m.texto | sin_markdown }}</span>{% endif %}
           </li>
           {% endfor %}
         </ol>
@@ -126,7 +127,7 @@
   <div class="isla">
     <div class="isla__bloque">
       <p class="aviso {{ 'aviso--verde' if p.tipo == 'prompt_final' else 'aviso--ambar' }}">{{ t["parche_final_pista" ~ sfx] if p.tipo == "prompt_final" else t["parche_sugerencia_pista" ~ sfx] }}</p>
-      {% if p.motivo %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.parche_rechazo }}</span> {{ p.motivo }}</p>{% endif %}
+      {% if p.motivo %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.parche_rechazo }}</span> {{ p.motivo | rechazo(t) }}</p>{% endif %}
       {% if p.cambio %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.cambio }}</span> {{ p.cambio }}</p>{% endif %}
       {% if p.hipotesis %}<p class="parrafo espaciado-arriba"><span class="rotulo rotulo--chico">{{ t.hipotesis }}</span> {{ p.hipotesis }}</p>{% endif %}
     </div>
@@ -162,7 +163,7 @@
       </div>
       {% for c in boleta.criterios %}
       <div class="fila criterio">
-        <span class="fila__nombre">{{ c.nombre }}{% if c.critico %} <span class="pildora pildora--chica pildora--rojo">{{ t.critico }}</span>{% endif %}
+        <span class="fila__nombre">{{ t.criterios.get(c.id, c.nombre) }}{% if c.critico %} <span class="pildora pildora--chica pildora--rojo">{{ t.critico }}</span>{% endif %}
           {% if c.antes is not none %}{{ barra(c.despues if mejoro and c.despues is not none else c.antes) }}{% endif %}</span>
         <span class="criterio__cifras fila__dato">
           <span>{{ c.antes if c.antes is not none else "·" }}</span>
@@ -211,7 +212,7 @@
     {% if publica %}
     <div class="isla isla--suave">
       <div class="isla__bloque">
-        <p class="parrafo">{{ t.inicio_bajada }}</p>
+        <p class="parrafo">{{ t.landing.bajada }}</p>
         <p class="espaciado-arriba"><a class="boton boton--primario" href="/app/nuevo">{{ t.cta_publica }}</a></p>
       </div>
     </div>

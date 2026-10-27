@@ -288,7 +288,6 @@ function vivo() {
     const aviso = el("div", `aviso ${tono} aviso--fila`);
     aviso.setAttribute("role", "status");
     const texto = el("p", "aviso__texto", T["fin_" + ev.estado] || T.fin_terminada);
-    if (ev.estado === "error" && ev.motivo) texto.append(" ", el("span", "dato", ev.motivo));
     if (!ev.boleta) texto.append(" ", T.sin_boleta);
     aviso.append(texto);
     if (ev.boleta) {

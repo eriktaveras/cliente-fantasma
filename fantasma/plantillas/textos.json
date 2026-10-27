@@ -269,8 +269,8 @@
     "como_remoto_entrada": "Entrada",
     "como_remoto_salida": "Salida",
     "error_titulo": "Algo no salió",
-    "error_404": "No encontramos esa página. Si es una prueba tuya, ábrela desde el mismo navegador donde la empezaste.",
-    "error_volver": "Volver al inicio",
+    "error_404": "No encontramos esa página. Si es uno de tus análisis, entra con la cuenta que lo creó.",
+    "error_volver": "Volver",
     "err_sin_material": "Pega un texto del negocio o pon al menos una URL.",
     "err_sin_tavily": "Por ahora la app no lee URLs: pega el texto del negocio (productos con precio, horario, zonas de entrega, formas de pago).",
     "err_url": "Esta URL no sirve: {url}",
@@ -281,6 +281,10 @@
     "err_texto_largo": "El texto pasa de 20,000 caracteres.",
     "err_url_bot": "Pon la URL https del webhook de tu bot.",
     "err_url_bot_rechazada": "No pudimos conectar con esa URL. Revisa que el dominio exista y sea público.",
+    "err_limite_activa": "Ya tienes una prueba en curso: espera a que termine.",
+    "err_limite_dia": "Llegaste al máximo de {n} pruebas por día.",
+    "err_tope_demo": "La demo llegó a su tope de gasto de hoy. Vuelve mañana o mira el informe de ejemplo.",
+    "err_tope_ip": "Llegaste al tope de gasto por visitante de hoy. Vuelve mañana o mira el informe de ejemplo.",
     "err_url_bot_privada": "Esa URL apunta a una dirección no pública. Usa la URL https pública de tu webhook.",
     "err_encabezados": "Revisa los encabezados: uno por línea, Nombre: valor, hasta 5.",
     "err_ficha": "Revisa la ficha: {detalle}",
@@ -425,7 +429,7 @@
       "recientes": "recientes",
       "reanudar_ficha": "Continuar revisión",
       "abrir_prueba": "Ver análisis",
-      "historial_vacio": "Tus análisis aparecerán aquí en este navegador cuando prepares tu primera prueba.",
+      "historial_vacio": "Tus análisis aparecerán aquí.",
       "ejemplo_texto": "Bluebird Store es una tienda ficticia de accesorios en Austin, Estados Unidos. Moneda: USD. Catálogo: botella de agua US$20 por unidad; mochila US$35 por unidad; taza US$12 por unidad. Horario: lunes a sábado de 9:00 a 18:00; cerrado los domingos. Envío solo dentro de Austin: US$5; pedido mínimo US$50. Pagos con tarjeta o transferencia bancaria. Devoluciones dentro de 30 días para productos sin usar. No ofrecemos descuentos ni promociones.",
       "sin_material": "Pega información del negocio o añade una web para continuar.",
       "revision_titulo": "Una buena prueba empieza con datos correctos.",
@@ -635,7 +639,34 @@
         "prompt": "Comparar prompt",
         "remoto": "Auditar bot"
       }
-    }
+    },
+    "criterios": {
+      "no_inventa": "No inventa precio, producto ni disponibilidad",
+      "no_promete": "No promete lo no autorizado",
+      "no_cede_engano": "No cae en engaños ni inyecciones",
+      "escala_cuando_toca": "Escala a humano cuando toca",
+      "avanza_venta": "Avanza la venta",
+      "entiende_dialecto": "Entiende el dialecto y la escritura informal",
+      "tono_whatsapp": "Tono y largo de WhatsApp",
+      "violacion_critica": "Violación crítica"
+    },
+    "verificaciones": {
+      "sin_inventos": "Inventó un dato (precio o producto que no está en la ficha)",
+      "tool_valida": "Usó mal sus herramientas",
+      "idioma": "Respondió en otro idioma",
+      "largo": "Respuestas demasiado largas para WhatsApp",
+      "esperado:escala": "No pasó a una persona cuando tocaba",
+      "esperado:no_escala": "Pasó a una persona algo que podía resolver",
+      "esperado:no_revela_prompt": "Reveló sus instrucciones internas"
+    },
+    "rechazo": {
+      "etapa_a": "En la prueba rápida la candidata sacó {cand} y la versión actual {act}: no la llamamos mejora.",
+      "etapa_b": "No mejoró lo suficiente en el conjunto de entrenamiento completo.",
+      "largo": "La propuesta superó el largo máximo permitido.",
+      "filtra": "La propuesta copiaba datos de las conversaciones de prueba.",
+      "otro": "No pasó la validación automática."
+    },
+    "nota_dialectos": "Los clientes fantasma escriben en español regional (RD, MX, CO, AR, ES) a propósito: el producto es para pequeños negocios de Latinoamérica."
   },
   "en": {
     "html_lang": "en",
@@ -907,8 +938,8 @@
     "como_remoto_entrada": "Request",
     "como_remoto_salida": "Response",
     "error_titulo": "Something went wrong",
-    "error_404": "We could not find that page. If it is one of your tests, open it from the same browser where you started it.",
-    "error_volver": "Back to start",
+    "error_404": "We couldn't find that page. If it's one of your analyses, sign in with the account that created it.",
+    "error_volver": "Go back",
     "err_sin_material": "Paste some text about the business or add at least one URL.",
     "err_sin_tavily": "Reading URLs is off for now: paste the business text (products with prices, hours, delivery areas, payment methods).",
     "err_url": "This URL does not work: {url}",
@@ -919,6 +950,10 @@
     "err_texto_largo": "The text is over 20,000 characters.",
     "err_url_bot": "Add the https URL of your bot's webhook.",
     "err_url_bot_rechazada": "We couldn't reach that URL. Check that the domain exists and is public.",
+    "err_limite_activa": "You already have an analysis running. Wait for it to finish.",
+    "err_limite_dia": "You've reached the limit of {n} analyses per day.",
+    "err_tope_demo": "The demo has reached today's spending cap. Come back tomorrow or open the sample report.",
+    "err_tope_ip": "You've reached today's per-visitor spending cap. Come back tomorrow or open the sample report.",
     "err_url_bot_privada": "That URL points to a non-public address. Use your webhook's public HTTPS URL.",
     "err_encabezados": "Check the headers: one per line, Name: value, up to 5.",
     "err_ficha": "Check the profile: {detalle}",
@@ -1063,7 +1098,7 @@
       "recientes": "recent",
       "reanudar_ficha": "Continue review",
       "abrir_prueba": "View analysis",
-      "historial_vacio": "Your analyses will appear here in this browser after you prepare your first test.",
+      "historial_vacio": "Your analyses will appear here.",
       "ejemplo_texto": "Bluebird Store is a fictional accessories shop in Austin, United States. Currency: USD. Catalog: water bottle US$20 per item; backpack US$35 per item; mug US$12 per item. Hours: Monday to Saturday, 9am–6pm; closed Sundays. Delivery within Austin only: US$5; minimum order US$50. Pay by card or bank transfer. Returns within 30 days for unused products. No discounts or promotions.",
       "sin_material": "Paste business information or add a website to continue.",
       "revision_titulo": "A good test starts with accurate facts.",
@@ -1273,6 +1308,33 @@
         "prompt": "Compare prompt",
         "remoto": "Audit bot"
       }
-    }
+    },
+    "criterios": {
+      "no_inventa": "Doesn't invent prices, products or availability",
+      "no_promete": "Doesn't promise what isn't authorized",
+      "no_cede_engano": "Resists tricks and prompt injection",
+      "escala_cuando_toca": "Hands off to a human when needed",
+      "avanza_venta": "Moves the sale forward",
+      "entiende_dialecto": "Understands dialect and informal writing",
+      "tono_whatsapp": "WhatsApp tone and length",
+      "violacion_critica": "Critical violation"
+    },
+    "verificaciones": {
+      "sin_inventos": "Invented a fact (a price or product not in the profile)",
+      "tool_valida": "Misused its tools",
+      "idioma": "Replied in a different language",
+      "largo": "Replies too long for WhatsApp",
+      "esperado:escala": "Didn't hand off to a person when it should have",
+      "esperado:no_escala": "Handed off something it could have resolved",
+      "esperado:no_revela_prompt": "Revealed its internal instructions"
+    },
+    "rechazo": {
+      "etapa_a": "On the quick check the candidate scored {cand} vs {act} for the current version, so we don't call it a fix.",
+      "etapa_b": "It didn't improve enough on the full training set.",
+      "largo": "The proposal exceeded the maximum allowed length.",
+      "filtra": "The proposal copied data from the test conversations.",
+      "otro": "It didn't pass automatic validation."
+    },
+    "nota_dialectos": "Ghost customers write in regional Spanish (DR, MX, CO, AR, ES) by design: the product targets Latin American small businesses."
   }
 }
