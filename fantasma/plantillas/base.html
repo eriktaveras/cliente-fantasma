@@ -27,42 +27,43 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap">
   <link rel="stylesheet" href="/static/css/taller.css">
-  <link rel="stylesheet" href="/static/css/fantasma.css?v=2">
+  <link rel="stylesheet" href="/static/css/fantasma.css?v=3">
   <script type="application/json" id="textos">{{ textos_js | tojson }}</script>
-  <script src="/static/js/fantasma.js?v=2" defer></script>
+  <script src="/static/js/fantasma.js?v=3" defer></script>
 </head>
-<body class="aplicacion {{ 'aplicacion--publica' if publica|default(false) else '' }}" data-pagina="{% block pagina %}{% endblock %}">
+<body class="aplicacion {{ 'marketing' if marketing|default(false) else '' }} {{ 'aplicacion--publica' if publica|default(false) else '' }}" data-pagina="{% block pagina %}{% endblock %}">
   <a class="saltar" href="#principal">{{ t.saltar }}</a>
   {% if not publica|default(false) %}
   <aside class="lateral" aria-label="{{ t.ui.navegacion }}">
-    <a class="identidad" href="/">{{ icono('fantasma', 'identidad__simbolo') }}<span>Cliente<span class="identidad__nombre">Fantasma<span class="identidad__punto">.</span></span></span></a>
+    <a class="identidad" href="/app">{{ icono('fantasma', 'identidad__simbolo') }}<span>Cliente<span class="identidad__nombre">Fantasma<span class="identidad__punto">.</span></span></span></a>
     <p class="lateral__rotulo">{{ t.ui.espacio }}</p>
     <nav class="lateral__nav">
-      <a class="lateral__enlace {{ 'lateral__enlace--activo' if actual in ('inicio', 'ficha', 'vivo') }}" href="/" {% if actual == 'inicio' %}aria-current="page"{% endif %}>{{ icono('mas') }}{{ t.ui.nuevo }}</a>
-      <a class="lateral__enlace {{ 'lateral__enlace--activo' if actual == 'boleta' }}" href="/#tus-pruebas">{{ icono('informe') }}{{ t.ui.historial }}</a>
+      <a class="lateral__enlace {{ 'lateral__enlace--activo' if actual in ('panel', 'boleta') }}" href="/app">{{ icono('informe') }}{{ t.auth.panel }}</a>
+      <a class="lateral__enlace {{ 'lateral__enlace--activo' if actual in ('inicio', 'ficha', 'vivo') }}" href="/app/nuevo" {% if actual == 'inicio' %}aria-current="page"{% endif %}>{{ icono('mas') }}{{ t.ui.nuevo }}</a>
       <a class="lateral__enlace {{ 'lateral__enlace--activo' if actual == 'como' }}" href="/como-funciona" {% if actual == 'como' %}aria-current="page"{% endif %}>{{ icono('ayuda') }}{{ t.nav_como }}</a>
     </nav>
-    <div class="lateral__nota">{{ icono('escudo') }}<p>{{ t.ui.nota_lateral }}</p><span class="lateral__linea"></span><p class="lateral__firma">TAVERAS SOLUTIONS</p></div>
+    <div class="lateral__nota"><a class="lateral__cuenta" href="/cuenta"><span class="avatar">{{ usuario.nombre[:1]|upper }}</span><span><strong>{{ usuario.nombre }}</strong><small>{{ t.auth.cuenta }}</small></span></a><form method="post" action="/logout"><button class="lateral__salir" type="submit">{{ t.auth.salir }} →</button></form></div>
   </aside>
   {% endif %}
   <div class="espacio">
     <header class="cabecera">
       <div class="cabecera__fila">
-        <a class="marca-movil" href="/">{{ icono('fantasma') }}<span>Cliente Fantasma</span></a>
-        <span class="cabecera__contexto">{{ t.ui.informe_compartido if publica|default(false) else t.ui.espacio }}</span>
+        <a class="marca-movil" href="{{ '/app' if usuario and not marketing|default(false) else '/' }}">{{ icono('fantasma') }}<span>Cliente Fantasma</span></a>
+        {% if marketing|default(false) %}<nav class="marketing-nav" aria-label="{{ t.ui.navegacion }}"><a href="/#recorridos">{{ t.landing.nav_recorridos }}</a><a href="/como-funciona">{{ t.nav_como }}</a></nav>{% endif %}
+        <span class="cabecera__contexto {{ 'oculto' if marketing|default(false) else '' }}">{{ t.ui.informe_compartido if publica|default(false) else t.ui.espacio }}</span>
         <div class="cabecera__derecha">
           {% if not publica|default(false) %}
           <details class="menu-movil">
             <summary aria-label="{{ t.ui.navegacion }}">{{ icono('menu') }}</summary>
             <nav aria-label="{{ t.ui.navegacion }}">
-              <a href="/">{{ t.ui.nuevo }}</a>
-              <a href="/#tus-pruebas">{{ t.ui.historial }}</a>
-              <a href="/como-funciona">{{ t.nav_como }}</a>
+              <a href="/app">{{ t.auth.panel }}</a><a href="/app/nuevo">{{ t.ui.nuevo }}</a>
+              <a href="/como-funciona">{{ t.nav_como }}</a><a href="/cuenta">{{ t.auth.cuenta }}</a><form method="post" action="/logout"><button type="submit">{{ t.auth.salir }}</button></form>
             </nav>
           </details>
           {% endif %}
-          <span class="entorno"><span></span>{{ t.ui.entorno }}</span>
+          {% if not marketing|default(false) %}<span class="entorno"><span></span>{{ t.ui.entorno }}</span>{% endif %}
           <a class="cabecera__idioma" href="/idioma/{{ otro_idioma }}?volver={{ request.url.path | urlencode }}" lang="{{ otro_idioma }}" hreflang="{{ otro_idioma }}"><span>{{ t.otro_idioma_corto }}</span><span class="oculto-visual">{{ t.otro_idioma }}</span></a>
+          {% if marketing|default(false) %}{% if usuario %}<a class="boton boton--primario boton--s" href="/app">{{ t.auth.panel }} →</a>{% else %}<a class="marketing-login" href="/login">{{ t.auth.login }}</a><a class="boton boton--primario boton--s marketing-registrar" href="/registro">{{ t.auth.registro }}</a>{% endif %}{% elif usuario %}<a class="cabecera__usuario" href="/cuenta" aria-label="{{ t.auth.cuenta }}"><span class="avatar">{{ usuario.nombre[:1]|upper }}</span></a>{% endif %}
         </div>
       </div>
     </header>

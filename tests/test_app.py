@@ -12,11 +12,20 @@ from fastapi.testclient import TestClient
 
 from fantasma import app as web
 from fantasma import costos, remoto
+from fantasma.cuentas import CLAVES
 from fantasma.eventos import Emisor
 from fantasma.servicio import Servicio
 from tests.test_servicio import COLMADO, RESPUESTA_BOT, LLMGuionado
 
 ORIGEN = {"origin": "http://testserver"}
+HASH_PRUEBA = CLAVES.hash("clave-de-prueba-segura")
+
+
+def autenticar_cliente(c, email="erik@example.com"):
+    cuentas = c.app.state.cuentas
+    usuario = cuentas.crear("Erik", email, HASH_PRUEBA)
+    c.cookies.set("fantasma_sesion", cuentas.sesion(usuario["id"]), domain="testserver.local")
+    return usuario
 
 
 @pytest.fixture
@@ -31,6 +40,7 @@ def servicio(tmp_path, config, monkeypatch):
 def cliente(servicio, monkeypatch):
     monkeypatch.setattr(web, "LATIDO_S", 0.05)
     with TestClient(web.crear_app(servicio), headers=ORIGEN) as c:
+        autenticar_cliente(c)
         yield c
 
 
@@ -108,8 +118,8 @@ def test_como_funciona_muestra_configuracion_activa(cliente):
 
 
 def test_idioma_por_accept_language_y_selector(cliente):
-    assert "What do you have today?" in cliente.get("/", headers={"accept-language": "en-US,en;q=0.9"}).text
-    assert "¿Qué tienes hoy?" in cliente.get("/", headers={"accept-language": "es-DO"}).text
+    assert "What do you have today?" in cliente.get("/app/nuevo", headers={"accept-language": "en-US,en;q=0.9"}).text
+    assert "¿Qué tienes hoy?" in cliente.get("/app/nuevo", headers={"accept-language": "es-DO"}).text
     r = cliente.get("/idioma/en?volver=/como-funciona", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/como-funciona"
     assert "One reference, three starting points" in cliente.get("/como-funciona", headers={"accept-language": "es"}).text  # la cookie manda
@@ -132,7 +142,7 @@ def test_textos_con_las_mismas_claves_en_los_dos_idiomas():
 
 
 def test_inicio_ofrece_tres_puntos_de_entrada_y_paneles_exclusivos(cliente):
-    html = cliente.get("/").text
+    html = cliente.get("/app/nuevo").text
     assert html.count('name="modo"') == 3
     assert all(f'value="{modo}"' in html for modo in ("generado", "prompt", "remoto"))
     assert 'data-panel-modo="prompt"' in html and 'name="prompt"' in html
@@ -279,6 +289,7 @@ def test_sse_repite_lo_guardado_y_respeta_last_event_id(cliente, servicio):
 def test_otro_navegador_no_ve_la_corrida_privada(cliente, servicio):
     run_id = crear(cliente)
     ajeno = TestClient(cliente.app, headers=ORIGEN)
+    autenticar_cliente(ajeno, "otro@example.com")
     for ruta in ("ficha", "vivo", "boleta", "eventos", "estado", "conversaciones.jsonl"):
         assert ajeno.get(f"/corrida/{run_id}/{ruta}").status_code == 404
     r = ajeno.post(f"/corrida/{run_id}/ficha", data=form_ficha(servicio, run_id, negocio="Otro"))
@@ -395,7 +406,7 @@ def test_encabezados_de():
 
 def test_sin_tavily_solo_url_pide_texto(cliente, servicio, monkeypatch):
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)
-    assert 'name="urls"' not in cliente.get("/").text
+    assert 'name="urls"' not in cliente.get("/app/nuevo").text
     r = cliente.post("/probar", data={"texto": "", "urls": "https://negocio.example"})
     assert r.status_code == 400 and "no lee URLs" in r.text
     assert servicio.indice.listar() == []
@@ -403,7 +414,7 @@ def test_sin_tavily_solo_url_pide_texto(cliente, servicio, monkeypatch):
 
 def test_con_tavily_muestra_urls(cliente, monkeypatch):
     monkeypatch.setenv("TAVILY_API_KEY", "tvly-prueba")
-    assert 'name="urls"' in cliente.get("/").text
+    assert 'name="urls"' in cliente.get("/app/nuevo").text
 
 
 @pytest.mark.parametrize("endpoint,modelo,visible", [
@@ -419,6 +430,6 @@ def test_inicio_solo_atribuye_nebius_nemotron_a_config_real(cliente, servicio, e
     for rol in servicio.config_base.roles.values():
         rol.proveedor = "demo"
         rol.modelo = modelo
-    respuesta = cliente.get("/")
+    respuesta = cliente.get("/app/nuevo")
     assert respuesta.status_code == 200
     assert ("NVIDIA Nemotron · Nebius Token Factory" in respuesta.text) is visible

@@ -17,12 +17,16 @@ Built for the **Nebius x NVIDIA Global AI Hackathon** (track: *Best Apps and Age
 - **Read-only live example:** [October 14 Nebius run](https://fantasma.eriktaveras.com/b/7E2rUIHGg4a_4bO4K02oQ5ax) — fictitious business, 15/15 evaluated cases, observed cost US$0.464. This single measurement is not a runtime, cost or accuracy guarantee.
 - **Public source:** https://github.com/eriktaveras/cliente-fantasma · [MIT](LICENSE)
 - **Track:** Best Apps and Agents.
-- The demo uses HTTP Basic authentication. Judges must receive its credentials privately in the Devpost testing-instructions field; they are deliberately absent from this public repository. Any username works with the supplied demo password.
-- Choose **Create a test bot**, click **Use an example**, and continue. The sample is a fictitious corner store, so it requires no customer data or external webhook.
+- The landing page and **View sample report** are public and read-only: they never create analyses or call inference APIs. Sign in with an account to create and run analyses; no manual approval is required. New accounts use a name, email and a 12–128 character password. Passwords use Argon2id; hashed, revocable session tokens and account-owned analyses persist in `runs/indice.sqlite`. No email confirmation or password-reset email service is configured in this release. Existing run, daily and visitor spending caps remain enforced after sign-in.
+- For judging, privately provide a test account's login credentials through Devpost's access instructions. Public visitors can read the completed sample report without signing in.
+- Set `FANTASMA_DEMO_TOKEN` to an existing, intentionally public report token.
+
+
+- From **My analyses**, choose **New analysis**. Select **Business facts only**, **I already have instructions**, or **I have a live bot**. Click **Use an example** for Bluebird Store, a fictitious accessories shop with USD prices, or supply your business facts. Prompt mode also requires your instructions; the live-bot mode requires a webhook.
 - Review the business card, then choose **Light** and launch. Watch conversations and evaluations arrive, then open the report card. Inspect coverage and the quoted failures before interpreting the score; an interrupted or incomplete run cannot approve a bot. Copy/export controls are available on the report.
-- **Generated mode evaluates a newly generated example bot**, not a production WhatsApp integration. To evaluate an existing bot, use **Connect my bot** with the documented webhook contract below.
+- **Business facts only** creates and evaluates instructions using a prototype. **I already have instructions** compares your prompt in the configured model/tool environment, not in your production integration. **I have a live bot** audits actual webhook responses and provides unvalidated recommendations; it does not install changes.
 - **How it works** lists the models currently configured. The hackathon deployment must keep NVIDIA Nemotron on Nebius Token Factory active throughout judging; running the optional local provider alone does not meet that requirement.
-- Daily/visitor budget limits may temporarily block new runs. The operator must provide judges with working access and sufficient budget through **December 15, 2026**; limits are not an excuse for an inaccessible submission.
+- Daily/visitor budget limits may temporarily block new runs. The operator must provide judges with working account access and sufficient budget through **December 15, 2026**; limits are not an excuse for an inaccessible submission.
 - Submission copy and remaining release items are in [the Devpost draft](docs/devpost.md). A public YouTube walkthrough under three minutes must be linked in the submission; no completed video is claimed here.
 
 ## The problem
@@ -213,7 +217,7 @@ docker compose up -d --build     # serves on 127.0.0.1:${HTTP_PORT:-8134}, runs/
 
 The public demo runs on a home server behind a Cloudflare Tunnel (`deploy/add-tunnel.sh`).
 
-Set `FANTASMA_CONFIG=config.local.yaml` in `.env` to mount a private local configuration instead of the example. Keep credentials in environment variables; private configurations, `.env` backups and local Compose overrides are ignored by Git. Set `FANTASMA_URL_PUBLICA=https://your-host` for canonical share links and HTTPS cookies behind the tunnel. `FANTASMA_CLAVE` protects private routes; unguessable report links remain read-only and public, including their referenced static assets. Shared report content is accessible to anyone holding its token.
+Set `FANTASMA_CONFIG=config.local.yaml` in `.env` to mount a private local configuration instead of the example. Keep credentials in environment variables; private configurations, `.env` backups and local Compose overrides are ignored by Git. Set `FANTASMA_URL_PUBLICA=https://your-host` for canonical share links and HTTPS cookies behind the tunnel. Private routes require an account session; the old shared `FANTASMA_CLAVE` Basic Auth variable is no longer used. The public homepage, read-only sample entry, registration/login and model information are accessible without a session. All private analysis routes require a signed-in account; there is no manual approval step. Unguessable report links remain read-only and public, including their referenced static assets. Shared report content is accessible to anyone holding its token. Prompt-mode public reports omit instructions, diffs, quoted evidence and conversations. Run access and dashboard history are account-owned, not based on remembering a run ID. Valid, signed ownership cookies from the previous release can be claimed once on sign-in/registration, without transferring runs that already belong to another account.
 
 Proxy headers are ignored by default. Configure `FANTASMA_PROXY_CIDRS` only for exclusive trusted proxy peers. Do not trust the Docker bridge when a LAN relay or other clients can reach the app through the same peer: leave it empty (visitors then share the gateway quota) or isolate those ingress paths first. Uvicorn does not rewrite the socket peer from forwarded headers. Run a single worker; events, task ownership and restart recovery are process-local.
 
@@ -250,7 +254,8 @@ fantasma/
   eventos.py    in-process event bus behind the live SSE view
   boleta.py     the report card
   costos.py     US$ per role and live budget
-  app.py        FastAPI web app with live conversations over SSE
+  cuentas.py    Argon2 passwords, revocable sessions and account-owned run access
+  app.py        public landing, account dashboard and FastAPI web app with SSE
 n8n/conector.json   n8n template for Bring your bot
 ```
 

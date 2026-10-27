@@ -327,9 +327,24 @@
     },
     "veredicto_incompleta": "Evaluación incompleta",
     "veredictos": {
-      "generado": {"listo": "Aprobó esta prueba", "ajustes": "Requiere ajustes", "no_lo_sueltes": "No superó esta prueba", "incompleta": "Evaluación incompleta"},
-      "prompt": {"listo": "Aprobó esta prueba", "ajustes": "Requiere ajustes", "no_lo_sueltes": "No superó esta prueba", "incompleta": "Evaluación incompleta"},
-      "remoto": {"listo": "Aprobó esta prueba", "ajustes": "Requiere ajustes", "no_lo_sueltes": "No superó esta prueba", "incompleta": "Evaluación incompleta"}
+      "generado": {
+        "listo": "Aprobó esta prueba",
+        "ajustes": "Requiere ajustes",
+        "no_lo_sueltes": "No superó esta prueba",
+        "incompleta": "Evaluación incompleta"
+      },
+      "prompt": {
+        "listo": "Aprobó esta prueba",
+        "ajustes": "Requiere ajustes",
+        "no_lo_sueltes": "No superó esta prueba",
+        "incompleta": "Evaluación incompleta"
+      },
+      "remoto": {
+        "listo": "Aprobó esta prueba",
+        "ajustes": "Requiere ajustes",
+        "no_lo_sueltes": "No superó esta prueba",
+        "incompleta": "Evaluación incompleta"
+      }
     },
     "cobertura_titulo": "Cobertura de la evaluación",
     "cobertura_pista": "La nota describe solo las conversaciones evaluadas. Faltan pruebas para emitir una aprobación.",
@@ -440,6 +455,185 @@
       "inferencia": "Inferencia configurada:",
       "ver_modelos": "Ver modelos y funcionamiento",
       "ejemplo_nombre": "Bluebird Store"
+    },
+    "auth": {
+      "login": "Iniciar sesión",
+      "registro": "Crear cuenta",
+      "salir": "Cerrar sesión",
+      "panel": "Mis análisis",
+      "nuevo": "Nuevo análisis",
+      "cuenta": "Mi cuenta",
+      "nombre": "Tu nombre",
+      "email": "Correo electrónico",
+      "clave": "Contraseña",
+      "confirmar": "Confirmar contraseña",
+      "clave_pista": "Usa entre 12 y 128 caracteres. Puedes usar una frase larga.",
+      "login_titulo": "Vuelve a tu espacio de pruebas.",
+      "login_pista": "Accede a tus análisis, instrucciones y resultados privados.",
+      "registro_titulo": "Tu próximo bot empieza con una buena prueba.",
+      "registro_pista": "Crea tu cuenta para ejecutar pruebas y guardar tus análisis en un espacio privado.",
+      "ya_cuenta": "¿Ya tienes cuenta?",
+      "sin_cuenta": "¿Primera vez por aquí?",
+      "volver": "Volver al inicio",
+      "necesitas_sesion": "Inicia sesión para acceder a tu espacio.",
+      "limite": "Demasiados intentos. Espera 15 minutos antes de volver a intentarlo.",
+      "email_invalido": "Escribe un correo electrónico válido.",
+      "datos_invalidos": "Completa tu nombre y usa una contraseña de 12 a 128 caracteres. Las contraseñas deben coincidir.",
+      "registro_error": "No pudimos crear la cuenta. Si ya tienes una, inicia sesión.",
+      "credenciales": "No pudimos verificar tus credenciales. Revisa los datos e inténtalo de nuevo.",
+      "seguro": "Un espacio privado para tus instrucciones y resultados.",
+      "guardado": "Tu contraseña se actualizó. Las demás sesiones se cerraron.",
+      "cambiar_clave": "Cambiar contraseña",
+      "actual": "Contraseña actual",
+      "nueva": "Nueva contraseña",
+      "guardar": "Actualizar contraseña",
+      "cuenta_pista": "Gestiona tu acceso al espacio de pruebas.",
+      "sesiones_pista": "Al cambiar tu contraseña, se cerrarán tus otras sesiones.",
+      "identidad": "Datos de tu cuenta",
+      "privacidad": "Tus instrucciones permanecen en tu informe privado. Comparte solo los resultados que el enlace público permite ver.",
+      "demo": "Ver informe de ejemplo",
+      "sin_registro": "sin registro"
+    },
+    "landing": {
+      "rotulo": "PRUEBAS PARA AGENTES DE VENTAS",
+      "titulo": "Encuentra los errores antes que tus clientes.",
+      "bajada": "Convierte los datos de tu negocio en clientes sintéticos que ponen a prueba instrucciones y bots. Descubre precios inventados, promesas no autorizadas y fallos con evidencia.",
+      "cta": "Crear mi primera prueba",
+      "ver": "Ver cómo funciona",
+      "nav_producto": "El producto",
+      "nav_recorridos": "Tres formas de empezar",
+      "modelo": "Clientes sintéticos. Datos reales del negocio.",
+      "ejemplo": "Ejemplo ilustrativo · Bluebird Store",
+      "cliente": "¿Me haces el envío gratis si compro US$15?",
+      "respuesta": "¡Claro! El envío es gratis desde US$15.",
+      "hallazgo": "Una promesa que el negocio no autorizó",
+      "hecho": "La ficha indica US$5 de envío y un mínimo de US$50.",
+      "etiqueta_hecho": "REFERENCIA DEL NEGOCIO",
+      "etiqueta_bot": "RESPUESTA DEL BOT",
+      "tres_rotulo": "EMPIEZA DONDE ESTÁS",
+      "tres_titulo": "Una referencia. Tres recorridos.",
+      "tres_bajada": "Los datos del negocio son la referencia en todos los casos. Lo que cambia es qué quieres poner a prueba.",
+      "recorridos": [
+        [
+          "generado",
+          "01",
+          "Solo tengo los datos del negocio",
+          "Creamos instrucciones y un prototipo con herramientas simuladas. Lo probamos y entregamos instrucciones con su estado de validación.",
+          "Crear instrucciones"
+        ],
+        [
+          "prompt",
+          "02",
+          "Ya tengo instrucciones",
+          "Probamos tu prompt y una propuesta de mejora en el mismo entorno y con los mismos casos. Sabrás si la propuesta superó la validación.",
+          "Comparar un prompt"
+        ],
+        [
+          "remoto",
+          "03",
+          "Tengo un bot funcionando",
+          "Los clientes sintéticos conversan con tu bot por webhook. Recibes una auditoría de respuestas y recomendaciones sin instalar cambios.",
+          "Auditar mi bot"
+        ]
+      ],
+      "flujo_rotulo": "DEL NEGOCIO A LA EVIDENCIA",
+      "flujo_titulo": "Un flujo que puedes revisar de principio a fin.",
+      "pasos": [
+        [
+          "01",
+          "Define la referencia",
+          "Pega tu catálogo, precios y políticas, o usa la web del negocio."
+        ],
+        [
+          "02",
+          "Revisa la ficha",
+          "Corrige la información antes de evaluar cualquier respuesta."
+        ],
+        [
+          "03",
+          "Observa la prueba",
+          "Sigue conversaciones, evaluaciones y gasto mientras avanza."
+        ],
+        [
+          "04",
+          "Decide con evidencia",
+          "Consulta cobertura, fallos y el estado de cada recomendación."
+        ]
+      ],
+      "evidencia_rotulo": "RESULTADOS QUE SE EXPLICAN",
+      "evidencia_titulo": "Una nota necesita contexto.",
+      "beneficios": [
+        [
+          "Mensajes concretos",
+          "Consulta dónde ocurrió el fallo y qué dato del negocio contradice."
+        ],
+        [
+          "Cobertura visible",
+          "Una evaluación incompleta no puede aprobar el bot."
+        ],
+        [
+          "Mejoras con estado",
+          "Un borrador rechazado no se presenta como una mejora comprobada."
+        ],
+        [
+          "Control de tus instrucciones",
+          "Los prompts y las conversaciones del modo prompt quedan en el informe privado."
+        ]
+      ],
+      "limites": "La comparación de instrucciones usa el modelo, las reglas críticas y las herramientas simuladas de este entorno. Una prueba aprobada no sustituye la validación de tu integración en producción.",
+      "cierre": "Dale a tu bot una prueba antes de darle clientes.",
+      "cierre_pista": "Empieza con un ejemplo ficticio o con los datos de tu negocio.",
+      "faq_titulo": "Antes de empezar",
+      "faq": [
+        [
+          "¿Necesito un bot para usarlo?",
+          "No. Puedes empezar solo con los datos del negocio y crear instrucciones con un prototipo de prueba."
+        ],
+        [
+          "¿Modifica mi bot real?",
+          "No. La auditoría por webhook evalúa respuestas y genera recomendaciones. No instala ni valida cambios en tu plataforma."
+        ],
+        [
+          "¿Qué modelos utiliza?",
+          "La configuración del hackathon usa NVIDIA Nemotron en Nebius Token Factory. La página Cómo funciona muestra los modelos activos."
+        ],
+        [
+          "¿Quién puede ver mis resultados?",
+          "Los análisis pertenecen a tu cuenta. Un enlace compartido permite leer el informe; en modo prompt excluye instrucciones, diff y conversaciones. La demo pública es un informe ya calculado. Para ejecutar nuevas pruebas debes iniciar sesión."
+        ]
+      ]
+    },
+    "panel": {
+      "rotulo": "TU ESPACIO DE PRUEBAS",
+      "titulo": "Cada análisis, un siguiente paso.",
+      "bajada": "Crea una prueba, continúa una revisión o vuelve a la evidencia de tus resultados.",
+      "total": "Análisis creados",
+      "activas": "En curso",
+      "terminadas": "Terminados",
+      "costo": "Gasto registrado",
+      "buscar": "Buscar por negocio",
+      "todos": "Todos los estados",
+      "filtrar": "Filtrar",
+      "lista": "Tus análisis",
+      "negocio": "Negocio",
+      "recorrido": "Recorrido",
+      "estado": "Estado",
+      "fecha": "Creado",
+      "accion": "Abrir",
+      "vacio_titulo": "Tu primera prueba empieza aquí.",
+      "vacio": "Pega los datos de tu negocio o usa Bluebird Store, nuestro ejemplo ficticio. Podrás revisar la ficha antes de lanzar.",
+      "sin_resultados": "No hay análisis que coincidan con tu búsqueda.",
+      "limpiar": "Limpiar filtros",
+      "ultimos": "Se muestran hasta 100 análisis recientes.",
+      "continuar": "Continuar revisión",
+      "ver": "Ver resultados",
+      "seguir": "Ver progreso",
+      "bienvenida": "Hola, {nombre}.",
+      "modos": {
+        "generado": "Crear instrucciones",
+        "prompt": "Comparar prompt",
+        "remoto": "Auditar bot"
+      }
     }
   },
   "en": {
@@ -770,9 +964,24 @@
     },
     "veredicto_incompleta": "Incomplete evaluation",
     "veredictos": {
-      "generado": {"listo": "Passed this test", "ajustes": "Requires adjustments", "no_lo_sueltes": "Did not pass this test", "incompleta": "Incomplete evaluation"},
-      "prompt": {"listo": "Passed this test", "ajustes": "Requires adjustments", "no_lo_sueltes": "Did not pass this test", "incompleta": "Incomplete evaluation"},
-      "remoto": {"listo": "Passed this test", "ajustes": "Requires adjustments", "no_lo_sueltes": "Did not pass this test", "incompleta": "Incomplete evaluation"}
+      "generado": {
+        "listo": "Passed this test",
+        "ajustes": "Requires adjustments",
+        "no_lo_sueltes": "Did not pass this test",
+        "incompleta": "Incomplete evaluation"
+      },
+      "prompt": {
+        "listo": "Passed this test",
+        "ajustes": "Requires adjustments",
+        "no_lo_sueltes": "Did not pass this test",
+        "incompleta": "Incomplete evaluation"
+      },
+      "remoto": {
+        "listo": "Passed this test",
+        "ajustes": "Requires adjustments",
+        "no_lo_sueltes": "Did not pass this test",
+        "incompleta": "Incomplete evaluation"
+      }
     },
     "cobertura_titulo": "Evaluation coverage",
     "cobertura_pista": "The score describes evaluated conversations only. More evidence is required before approval.",
@@ -883,6 +1092,185 @@
       "inferencia": "Configured inference:",
       "ver_modelos": "See models and workflow",
       "ejemplo_nombre": "Bluebird Store"
+    },
+    "auth": {
+      "login": "Sign in",
+      "registro": "Create account",
+      "salir": "Sign out",
+      "panel": "My analyses",
+      "nuevo": "New analysis",
+      "cuenta": "My account",
+      "nombre": "Your name",
+      "email": "Email address",
+      "clave": "Password",
+      "confirmar": "Confirm password",
+      "clave_pista": "Use 12–128 characters. A long passphrase works well.",
+      "login_titulo": "Back to your testing workspace.",
+      "login_pista": "Access your analyses, instructions and private results.",
+      "registro_titulo": "Your next bot starts with a better test.",
+      "registro_pista": "Create your account to run tests and keep your analyses in a private workspace.",
+      "ya_cuenta": "Already have an account?",
+      "sin_cuenta": "New here?",
+      "volver": "Back to home",
+      "necesitas_sesion": "Sign in to access your workspace.",
+      "limite": "Too many attempts. Wait 15 minutes before trying again.",
+      "email_invalido": "Enter a valid email address.",
+      "datos_invalidos": "Enter your name and use a 12–128 character password. Passwords must match.",
+      "registro_error": "We could not create the account. If you already have one, sign in.",
+      "credenciales": "We could not verify your credentials. Check your details and try again.",
+      "seguro": "A private workspace for your instructions and results.",
+      "guardado": "Your password was updated. Your other sessions were signed out.",
+      "cambiar_clave": "Change password",
+      "actual": "Current password",
+      "nueva": "New password",
+      "guardar": "Update password",
+      "cuenta_pista": "Manage access to your testing workspace.",
+      "sesiones_pista": "Changing your password signs out your other sessions.",
+      "identidad": "Account details",
+      "privacidad": "Your instructions stay in your private report. Share only the results available through the public link.",
+      "demo": "View sample report",
+      "sin_registro": "no signup"
+    },
+    "landing": {
+      "rotulo": "TESTING FOR SALES AGENTS",
+      "titulo": "Find the failures before your customers do.",
+      "bajada": "Turn business facts into synthetic customers that test your instructions and bots. Find invented prices, unauthorized promises and failures backed by evidence.",
+      "cta": "Create my first test",
+      "ver": "See how it works",
+      "nav_producto": "The product",
+      "nav_recorridos": "Three ways to start",
+      "modelo": "Synthetic customers. Real business facts.",
+      "ejemplo": "Illustrative example · Bluebird Store",
+      "cliente": "Can you deliver for free if I spend US$15?",
+      "respuesta": "Of course! Delivery is free from US$15.",
+      "hallazgo": "A promise the business never authorized",
+      "hecho": "The profile specifies US$5 delivery and a US$50 minimum.",
+      "etiqueta_hecho": "BUSINESS REFERENCE",
+      "etiqueta_bot": "BOT RESPONSE",
+      "tres_rotulo": "START WHERE YOU ARE",
+      "tres_titulo": "One reference. Three starting points.",
+      "tres_bajada": "Business facts are the reference in every mode. What changes is what you want to test.",
+      "recorridos": [
+        [
+          "generado",
+          "01",
+          "I only have business facts",
+          "We create instructions and a prototype with simulated tools, test it, and deliver instructions with their validation status.",
+          "Create instructions"
+        ],
+        [
+          "prompt",
+          "02",
+          "I already have instructions",
+          "Test your prompt and a proposed improvement in the same environment against the same cases. See whether the proposal passed validation.",
+          "Compare a prompt"
+        ],
+        [
+          "remoto",
+          "03",
+          "I have a live bot",
+          "Synthetic customers talk to your bot through a webhook. Get an audit of its responses and recommendations without installing changes.",
+          "Audit my bot"
+        ]
+      ],
+      "flujo_rotulo": "FROM BUSINESS FACTS TO EVIDENCE",
+      "flujo_titulo": "A workflow you can review from start to finish.",
+      "pasos": [
+        [
+          "01",
+          "Set the reference",
+          "Paste your catalog, prices and policies, or use the business website."
+        ],
+        [
+          "02",
+          "Review the profile",
+          "Correct the information before evaluating any response."
+        ],
+        [
+          "03",
+          "Watch the test",
+          "Follow conversations, evaluations and spending as they happen."
+        ],
+        [
+          "04",
+          "Decide with evidence",
+          "Inspect coverage, failures and the status of each recommendation."
+        ]
+      ],
+      "evidencia_rotulo": "RESULTS YOU CAN UNDERSTAND",
+      "evidencia_titulo": "A score needs context.",
+      "beneficios": [
+        [
+          "Specific messages",
+          "Inspect where the failure happened and which business fact it contradicts."
+        ],
+        [
+          "Visible coverage",
+          "An incomplete evaluation cannot approve the bot."
+        ],
+        [
+          "Clear validation status",
+          "A rejected draft is never presented as a proven improvement."
+        ],
+        [
+          "Control of your instructions",
+          "Prompts and conversations in prompt mode stay in your private report."
+        ]
+      ],
+      "limites": "Instruction comparisons use this environment’s model, protected critical rules and simulated tools. Passing a test does not replace validation of your production integration.",
+      "cierre": "Give your bot a test before giving it customers.",
+      "cierre_pista": "Start with a fictional example or your own business facts.",
+      "faq_titulo": "Before you start",
+      "faq": [
+        [
+          "Do I need a bot to use it?",
+          "No. Start with business facts and create instructions using a test prototype."
+        ],
+        [
+          "Does it modify my live bot?",
+          "No. Webhook audits evaluate responses and produce recommendations. They do not install or validate changes in your platform."
+        ],
+        [
+          "Which models does it use?",
+          "The hackathon configuration uses NVIDIA Nemotron on Nebius Token Factory. How it works lists the currently configured models."
+        ],
+        [
+          "Who can see my results?",
+          "Analyses belong to your account. A shared link allows reading the report; prompt-mode reports omit instructions, diffs and conversations. The public demo is a completed report. Sign in to run new tests."
+        ]
+      ]
+    },
+    "panel": {
+      "rotulo": "YOUR TESTING WORKSPACE",
+      "titulo": "Every analysis, a next step.",
+      "bajada": "Create a test, continue a review or revisit the evidence in your results.",
+      "total": "Analyses created",
+      "activas": "In progress",
+      "terminadas": "Completed",
+      "costo": "Recorded spending",
+      "buscar": "Search by business",
+      "todos": "All statuses",
+      "filtrar": "Filter",
+      "lista": "Your analyses",
+      "negocio": "Business",
+      "recorrido": "Mode",
+      "estado": "Status",
+      "fecha": "Created",
+      "accion": "Open",
+      "vacio_titulo": "Your first test starts here.",
+      "vacio": "Paste your business facts or use Bluebird Store, our fictional example. Review the profile before launching.",
+      "sin_resultados": "No analyses match your search.",
+      "limpiar": "Clear filters",
+      "ultimos": "Showing up to 100 recent analyses.",
+      "continuar": "Continue review",
+      "ver": "View results",
+      "seguir": "View progress",
+      "bienvenida": "Hi, {nombre}.",
+      "modos": {
+        "generado": "Create instructions",
+        "prompt": "Compare prompt",
+        "remoto": "Audit bot"
+      }
     }
   }
 }

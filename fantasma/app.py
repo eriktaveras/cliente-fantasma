@@ -5,8 +5,6 @@ Arranque: `uv run uvicorn fantasma.app:app --host 127.0.0.1 --port <puerto>` det
 """
 
 import asyncio
-import base64
-import binascii
 import hashlib
 import hmac
 import ipaddress
@@ -14,12 +12,13 @@ import json
 import os
 import re
 import secrets
+import sqlite3
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, get_args
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlencode
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response, StreamingResponse
@@ -28,8 +27,11 @@ from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 from starlette.datastructures import MutableHeaders
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.concurrency import run_in_threadpool
+from email_validator import validate_email, EmailNotValidError
 
 from fantasma import remoto
+from fantasma.cuentas import Cuentas, CLAVES, HASH_FICTICIO, DURACION_SESION
 from fantasma.costos import PrecioDesconocido, PresupuestoAgotado
 from fantasma.ficha import Ficha
 from fantasma.motor.config import Remoto
@@ -126,7 +128,7 @@ def mismo_origen(request: Request) -> bool:
         return False
     try:
         u = urlsplit(origen)
-        return u.scheme in ("http", "https") and not u.username and u.netloc == request.headers.get("host")
+        return u.scheme == ("https" if es_https(request) else request.url.scheme) and not u.username and u.netloc == request.headers.get("host")
     except ValueError:
         return False
 
@@ -200,16 +202,14 @@ def ficha_de_form(form, base: Ficha) -> dict:
     }
 
 
-def clave_correcta(request: Request, clave: str) -> bool:
-    """Basic Auth con cualquier usuario: solo cuenta la clave."""
-    tipo, _, valor = request.headers.get("authorization", "").partition(" ")
-    if tipo.lower() != "basic":
-        return False
-    try:
-        dada = base64.b64decode(valor, validate=True).decode().partition(":")[2]
-    except (binascii.Error, UnicodeDecodeError):
-        return False
-    return hmac.compare_digest(dada.encode(), clave.encode())
+def cookie_sesion(request: Request) -> str:
+    return "__Host-fantasma_sesion" if es_https(request) else "fantasma_sesion"
+
+
+def destino_login(valor: str) -> str:
+    if len(valor) <= 1024 and not any(c in valor for c in "\\\r\n") and valor.startswith(("/app", "/corrida/", "/cuenta")):
+        return valor
+    return "/app"
 
 
 class Guardia:
@@ -234,14 +234,6 @@ class Guardia:
                     h.setdefault("Cache-Control", "no-store")
             await send(mensaje)
 
-        clave = os.environ.get("FANTASMA_CLAVE")
-        publica = request.method in ("GET", "HEAD") and (
-            request.url.path == "/salud" or re.fullmatch(r"/b/[A-Za-z0-9_-]{20,64}", request.url.path)
-            or request.url.path.startswith("/static/") or re.fullmatch(r"/idioma/(es|en)", request.url.path)
-        )
-        if clave and not publica and not clave_correcta(request, clave):
-            pedir = PlainTextResponse("Clave requerida", status_code=401, headers={"WWW-Authenticate": 'Basic realm="Cliente Fantasma", charset="UTF-8"'})
-            return await pedir(scope, receive, con_cabeceras)
         if request.method not in ("GET", "HEAD", "OPTIONS"):
             largo = request.headers.get("content-length", "")
             rechazo = None
@@ -281,6 +273,25 @@ class Guardia:
 
             receive = recibir_cuerpo
 
+        cuentas = request.app.state.cuentas
+        usuario = cuentas.usuario(request.cookies.get(cookie_sesion(request)))
+        scope.setdefault("state", {})["usuario"] = usuario
+        publica = (
+            request.method in ("GET", "HEAD") and (
+                request.url.path in ("/", "/demo", "/login", "/registro", "/como-funciona", "/salud", "/n8n/conector.json")
+                or request.url.path.startswith("/static/")
+                or re.fullmatch(r"/b/[A-Za-z0-9_-]{20,64}", request.url.path)
+                or re.fullmatch(r"/idioma/(es|en)", request.url.path)
+            )
+            or request.method == "POST" and request.url.path in ("/login", "/registro")
+        )
+        if not publica and not usuario:
+            if request.method == "GET" and not request.url.path.endswith(("/estado", "/eventos", ".jsonl")):
+                respuesta = RedirectResponse("/login?" + urlencode({"volver": str(request.url.path)}), status_code=303)
+            else:
+                respuesta = PlainTextResponse(TEXTOS[idioma_de(request)]["auth"]["necesitas_sesion"], status_code=401)
+            return await respuesta(scope, receive, con_cabeceras)
+
         await self.app(scope, receive, con_cabeceras)
 
 
@@ -296,6 +307,13 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
             app.state.servicio = Servicio()
         app.state.servicio.indice.marcar_interrumpidas()
         app.state.secreto = _secreto(app.state.servicio.raiz)
+        app.state.cuentas = Cuentas(app.state.servicio.indice.db)
+        app.state.hash_slots = asyncio.Semaphore(2)
+        app.state.servicio.raiz.chmod(0o700)
+        for nombre in ("indice.sqlite", "indice.sqlite-wal", "indice.sqlite-shm"):
+            ruta = app.state.servicio.raiz / nombre
+            if ruta.exists():
+                ruta.chmod(0o600)
         yield
 
     app = FastAPI(lifespan=vida, docs_url=None, redoc_url=None, openapi_url=None)
@@ -335,6 +353,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
                 "tavily": hay_tavily(),
                 "nebius_nemotron": nebius_nemotron,
                 "max_prompt_chars": max_prompt_chars,
+                "usuario": getattr(request.state, "usuario", None),
                 **ctx,
             },
             status_code=status,
@@ -353,6 +372,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
         return [x for x in valor.split("~") if RUN_ID.match(x)]
 
     def marcar_mia(request: Request, respuesta: Response, run_id: str) -> None:
+        request.app.state.cuentas.asociar(request.state.usuario["id"], [run_id])
         ids = [run_id, *[x for x in mias(request) if x != run_id]][:MAX_MIAS]
         valor = "~".join(ids)
         respuesta.set_cookie(
@@ -361,7 +381,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
         )
 
     def mia(request: Request, run_id: str) -> str:
-        if run_id not in mias(request):
+        if not request.app.state.cuentas.pertenece(request.state.usuario["id"], run_id):
             raise HTTPException(404)
         return run_id
 
@@ -375,16 +395,138 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
 
     # -------------------------------------------- páginas fijas
 
+    @app.get("/app/nuevo", response_class=HTMLResponse)
+    async def inicio(request: Request, modo: str = "generado", ejemplo: int = 0):
+        datos = {"modo": modo if modo in ("generado", "prompt", "remoto") else "generado"}
+        if ejemplo == 1:
+            ui = TEXTOS[idioma_de(request)]["ui"]
+            datos.update(nombre=ui["ejemplo_nombre"], texto=ui["ejemplo_texto"])
+        return pagina(request, "inicio.html", previas=_previas(request), datos=datos)
+
     @app.get("/", response_class=HTMLResponse)
-    async def inicio(request: Request):
-        return pagina(request, "inicio.html", previas=_previas(request), datos={})
+    async def portada(request: Request):
+        return pagina(request, "portada.html", publica=True, marketing=True)
+
+    @app.get("/app", response_class=HTMLResponse)
+    async def panel(request: Request, q: str = "", estado: str = ""):
+        cuentas = request.app.state.cuentas
+        busqueda = q[:120].strip()
+        filas = cuentas.corridas(request.state.usuario["id"], busqueda, estado)
+        return pagina(request, "panel.html", corridas=filas, **cuentas.resumen(request.state.usuario["id"]),
+                      q=busqueda, filtro_estado=estado)
+
+
+    def abrir_sesion(request: Request, usuario: dict, volver: str = "/app"):
+        cuentas = request.app.state.cuentas
+        cuentas.cerrar(request.cookies.get(cookie_sesion(request)))
+        cuentas.asociar(usuario["id"], mias(request))
+        duracion = DURACION_SESION
+        token = cuentas.sesion(usuario["id"], duracion)
+        respuesta = RedirectResponse(destino_login(volver), status_code=303)
+        respuesta.set_cookie(cookie_sesion(request), token, max_age=duracion,
+                             httponly=True, secure=es_https(request), samesite="lax")
+        respuesta.delete_cookie(COOKIE_MIAS)
+        return respuesta
+
+    async def procesar_clave(funcion, *args):
+        async with app.state.hash_slots:
+            return await run_in_threadpool(funcion, *args)
+
+    def limitar_acceso(request: Request, email: str, accion: str) -> bool:
+        cuentas = request.app.state.cuentas
+        secreto = request.app.state.secreto
+        ip = hmac.new(secreto, ("auth:" + ip_de(request)).encode(), hashlib.sha256).hexdigest()
+        correo = hmac.new(secreto, ("email:" + email).encode(), hashlib.sha256).hexdigest()
+        return cuentas.permitir(accion + ":" + ip, 40) and cuentas.permitir(accion + ":" + correo, 10)
+
+    @app.get("/login", response_class=HTMLResponse)
+    @app.get("/registro", response_class=HTMLResponse)
+    async def acceso(request: Request, volver: str = "/app"):
+        if request.state.usuario:
+            return RedirectResponse(destino_login(volver), status_code=303)
+        return pagina(request, "acceso.html", publica=True, marketing=True,
+                      registro=request.url.path == "/registro", volver=destino_login(volver), datos={})
+
+    @app.post("/login")
+    @app.post("/registro")
+    async def autenticar(request: Request):
+        form = await request.form()
+        registro = request.url.path == "/registro"
+        email = str(form.get("email", "")).strip().casefold()[:255]
+        nombre = str(form.get("nombre", "")).strip()[:80]
+        clave = str(form.get("clave", ""))
+        volver = destino_login(str(form.get("volver", "/app")))
+        t = TEXTOS[idioma_de(request)]["auth"]
+        def error(mensaje, status=400):
+            return pagina(request, "acceso.html", status, publica=True, marketing=True, registro=registro,
+                          volver=volver, datos={"email": email, "nombre": nombre}, error=mensaje)
+        if not limitar_acceso(request, email, "registro" if registro else "login"):
+            return error(t["limite"], 429)
+        if registro:
+            try:
+                email = validate_email(email, check_deliverability=False).normalized.casefold()
+            except EmailNotValidError:
+                return error(t["email_invalido"])
+            if not nombre or len(clave) < 12 or len(clave) > 128 or clave != form.get("confirmar"):
+                return error(t["datos_invalidos"])
+            clave_hash = await procesar_clave(CLAVES.hash, clave)
+            try:
+                usuario = request.app.state.cuentas.crear(nombre, email, clave_hash)
+            except sqlite3.IntegrityError:
+                return error(t["registro_error"])
+        else:
+            fila = request.app.state.cuentas.por_email(email)
+            valida = await procesar_clave(CLAVES.verify, clave[:129], fila["clave_hash"] if fila else HASH_FICTICIO)
+            if not fila or not valida or len(clave) > 128:
+                return error(t["credenciales"], 400)
+            usuario = dict(fila)
+        return abrir_sesion(request, usuario, volver)
+
+    @app.get("/demo")
+    async def demo(request: Request):
+        # Un informe existente: jamás crea cuentas, corridas ni llamadas de inferencia.
+        token = os.environ.get("FANTASMA_DEMO_TOKEN", "")
+        if re.fullmatch(r"[A-Za-z0-9_-]{20,64}", token) and srv(request).indice.por_token(token):
+            return RedirectResponse("/b/" + token, status_code=303)
+        return RedirectResponse("/#recorridos", status_code=303)
+
+    @app.post("/logout")
+    async def salir(request: Request):
+        request.app.state.cuentas.cerrar(request.cookies.get(cookie_sesion(request)))
+        respuesta = RedirectResponse("/login", status_code=303)
+        respuesta.delete_cookie(cookie_sesion(request), secure=es_https(request), httponly=True, samesite="lax")
+        respuesta.delete_cookie(COOKIE_MIAS)
+        return respuesta
+
+    @app.get("/cuenta", response_class=HTMLResponse)
+    async def cuenta(request: Request):
+        return pagina(request, "cuenta.html")
+
+    @app.post("/cuenta/clave")
+    async def cambiar_clave(request: Request):
+        usuario = request.state.usuario
+        t = TEXTOS[idioma_de(request)]["auth"]
+        if not limitar_acceso(request, usuario["email"], "clave"):
+            return pagina(request, "cuenta.html", 429, error=t["limite"])
+        form = await request.form()
+        fila = request.app.state.cuentas.por_email(usuario["email"])
+        actual = str(form.get("actual", ""))
+        nueva = str(form.get("nueva", ""))
+        valida = await procesar_clave(CLAVES.verify, actual[:129], fila["clave_hash"])
+        if not valida or len(actual) > 128:
+            return pagina(request, "cuenta.html", 400, error=t["credenciales"])
+        if not 12 <= len(nueva) <= 128 or nueva != form.get("confirmar"):
+            return pagina(request, "cuenta.html", 400, error=t["datos_invalidos"])
+        clave_hash = await procesar_clave(CLAVES.hash, nueva)
+        request.app.state.cuentas.cambiar_clave(usuario["id"], clave_hash)
+        return abrir_sesion(request, usuario, "/cuenta?guardada=1")
 
     @app.get("/como-funciona", response_class=HTMLResponse)
     async def como_funciona(request: Request):
         config = srv(request).config_base
         modelos = {rol: r.modelo for rol, r in config.roles.items()}
         proveedores = sorted({r.proveedor for r in config.roles.values()})
-        return pagina(request, "como.html", modelos=modelos, proveedores=proveedores)
+        return pagina(request, "como.html", modelos=modelos, proveedores=proveedores, publica=True, marketing=True)
 
     @app.get("/idioma/{codigo}")
     async def cambiar_idioma(codigo: str, volver: str = "/"):
@@ -406,7 +548,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
 
     def _previas(request: Request) -> list[dict]:
         out = []
-        for run_id in mias(request)[:5]:
+        for run_id in [f["id"] for f in request.app.state.cuentas.corridas(request.state.usuario["id"])][:5]:
             try:
                 e = srv(request).estado(run_id)
             except KeyError:
@@ -448,7 +590,10 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
         except Rechazo as r:
             return pagina(request, "inicio.html", 400, error=_mensaje(request, r), previas=_previas(request), datos=datos)
         try:
-            run_id = await srv(request).crear_ficha(urls, datos["texto"][:MAX_TEXTO], ip_de(request), datos["nombre"][:200])
+            run_id = await srv(request).crear_ficha(
+                urls, datos["texto"][:MAX_TEXTO], ip_de(request), datos["nombre"][:200],
+                al_crear=lambda rid: request.app.state.cuentas.asociar(request.state.usuario["id"], [rid]),
+            )
         except Limite as exc:
             return pagina(request, "inicio.html", 429, error=str(exc), previas=_previas(request), datos=datos)
         except PresupuestoAgotado as exc:
@@ -589,6 +734,8 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
                     except TimeoutError:
                         yield ": latido\n\n"
                         continue
+                    if not request.app.state.cuentas.usuario(request.cookies.get(cookie_sesion(request))):
+                        break
                     yield f"id: {evento['id']}\ndata: {json.dumps(evento, ensure_ascii=False, default=str)}\n\n"
                     # Después del fin esa corrida no publica nada más: se cierra en vez de mandar latidos sin fin.
                     if evento["tipo"] == "fin":

@@ -70,15 +70,15 @@ def test_boleta_compartida_sin_clave_no_abre_rutas_privadas(cliente, servicio, m
         r = visitante.get(f"/b/{token}")
         assert r.status_code == 200 and "Cache-Control" in r.headers and r.headers["cache-control"] == "no-store"
         assert visitante.get("/static/js/fantasma.js").status_code == 200
-        assert visitante.get("/").status_code == 401
+        assert visitante.get("/").status_code == 200
         assert visitante.get(f"/corrida/{run_id}/estado").status_code == 401
         assert visitante.post(f"/b/{token}", data={}).status_code == 401
-        assert visitante.get("/", auth=("usuario", "prueba-auditoria")).status_code == 200
+        assert visitante.get("/app", auth=("usuario", "prueba-auditoria"), follow_redirects=False).status_code == 303
 
 
 def test_cabeceras_seguridad_tambien_en_rechazos(cliente, monkeypatch):
     monkeypatch.setenv("FANTASMA_CLAVE", "prueba")
-    r = cliente.get("/")
+    r = TestClient(cliente.app).get("/corrida/no-existe/estado")
     assert r.status_code == 401
     assert r.headers["x-content-type-options"] == "nosniff"
     assert r.headers["cache-control"] == "no-store"

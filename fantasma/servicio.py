@@ -167,11 +167,13 @@ class Servicio:
 
     # ------------------------------------------------------------ 1. ficha
 
-    async def crear_ficha(self, urls: list[str], texto: str, ip: str, nombre: str = "") -> str:
+    async def crear_ficha(self, urls: list[str], texto: str, ip: str, nombre: str = "", *, al_crear: Callable[[str], None] | None = None) -> str:
         ip_hash = self.hash_ip(ip)
         self._verificar_limites(ip_hash)
         run_id = f"{datetime.now():%Y%m%d}-{secrets.token_hex(4)}"
         self.indice.crear(run_id, ip_hash, negocio=nombre)
+        if al_crear:
+            al_crear(run_id)
         self._publicar(run_id, "etapa", etapa="investigando")
         tavily_key = os.environ.get("TAVILY_API_KEY") or None
         previo = self.tavily_usd if tavily_key and (urls or nombre) else 0.0

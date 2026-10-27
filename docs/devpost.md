@@ -56,14 +56,14 @@ The October 14 changes add coverage integrity, stronger grounded evaluation, pro
 
 ## Testing instructions for Devpost (private field)
 
-1. Open the English demo URL above. In the browser's Basic authentication prompt, use any username and the **current demo password supplied privately by Erik**. Do not publish it in GitHub, screenshots or the video.
-2. Choose **Create a test bot**, click **Use an example**, and continue. Review the fictitious business card.
+1. Open the English demo URL above and click **View sample report** to read a completed analysis without signup or new inference. To run a new analysis, sign in with the judge account provided privately in the submission access instructions, or create an account. No manual approval is required. Do not show real credentials in screenshots or video.
+2. Choose **Business facts only**, click **Use an example**, and review the fictitious Bluebird Store profile. **I already have instructions** tests a pasted prompt in the simulated environment; **I have a live bot** audits a webhook.
 3. Select **Light** and launch. Watch conversations/evaluations; open the report when the run stops. Runtime varies and model requests are subject to a US$1 run cap.
 4. Inspect coverage, exact failure messages, prompt-validation status, export and sharing controls. A budget stop produces a partial report, not a passing result.
-5. Use **How it works** to inspect active models. For an existing bot, use **Connect my bot** with the README webhook contract.
+5. Use **How it works** to inspect active models. For an existing bot, use **I have a live bot** with the README webhook contract.
 6. If testing locally, follow the README setup, set a valid `NEBIUS_API_KEY`, copy `config.example.yaml` to `config.yaml`, and use pasted example data; Tavily is optional.
 
-The operator must keep the hosted project free and available to judges through **December 15, 2026**, provide the actual credentials in the private submission field and ensure budget limits do not prevent their evaluation.
+The operator must keep the hosted project free and available to judges through **December 15, 2026**, provide clear account-access instructions in the submission and ensure budget limits do not prevent their evaluation.
 
 ## Technical verification — October 14, 2026
 
@@ -78,7 +78,7 @@ The operator must keep the hosted project free and available to judges through *
 
 - [ ] Commit/publish the current audited code and UX to the public repository, then verify that the submitted branch contains this version and GitHub shows MIT.
 - [ ] Paste a real public YouTube video URL below three minutes. Show the app working, the active Nemotron models and their runtime use of Token Factory. All narration/captions and submission materials must be English or include an English translation.
-- [ ] Supply working demo credentials privately in Devpost and test access from a fresh browser.
+- [ ] Test the read-only public sample from a fresh browser, plus judge login and the registration-to-analysis flow, and update Devpost with the current access instructions.
 - [ ] Confirm personal/team eligibility and any pre-existing project dates; select a Builders & Brews city only if actually attended.
 - [ ] Confirm the final submission form contains description, category, demo, public code, video, feedback and any required prior-work explanation.
 - [ ] Keep demo access, inference credits and availability working throughout judging. Current caps alone do not establish that future availability.

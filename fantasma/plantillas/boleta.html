@@ -212,7 +212,7 @@
     <div class="isla isla--suave">
       <div class="isla__bloque">
         <p class="parrafo">{{ t.inicio_bajada }}</p>
-        <p class="espaciado-arriba"><a class="boton boton--primario" href="/">{{ t.cta_publica }}</a></p>
+        <p class="espaciado-arriba"><a class="boton boton--primario" href="/app/nuevo">{{ t.cta_publica }}</a></p>
       </div>
     </div>
     {% else %}
@@ -227,7 +227,7 @@
           <button class="boton boton--suave" type="button" data-copiar="#enlace">{{ t.copiar }}</button>
         </div>
         <p class="espaciado-arriba"><a class="enlace-accion" href="/corrida/{{ run_id }}/conversaciones.jsonl" download>{{ t.descargar_jsonl }}</a></p>
-        <p><a class="enlace-accion" href="/">{{ t.probar_otro }}</a></p>
+        <p><a class="enlace-accion" href="/app/nuevo">{{ t.probar_otro }}</a></p>
       </div>
     </div>
     {% endif %}
