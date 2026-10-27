@@ -373,12 +373,12 @@ def test_ficha_invalida_se_vuelve_a_mostrar(cliente, servicio):
 def test_remoto_con_url_interna_no_lanza(cliente, servicio):
     # Se rechaza en el inicio, antes de pagar la ficha.
     r = cliente.post("/probar", data={"modo": "remoto", "texto": COLMADO, "url_bot": "https://127.0.0.1/hook"}, follow_redirects=False)
-    assert r.status_code == 400 and "no pública" in r.text
+    assert r.status_code == 400 and "no pública" in r.text and "(127.0.0.1)" not in r.text
     assert servicio.indice.listar() == []
     # Y también al lanzar, si alguien la cambia en la ficha.
     run_id = crear(cliente)
     r = cliente.post(f"/corrida/{run_id}/ficha", data=form_ficha(servicio, run_id, accion="lanzar", modo="remoto", url_bot="https://127.0.0.1/hook"))
-    assert r.status_code == 400 and "no pública" in r.text
+    assert r.status_code == 400 and "no pública" in r.text and "(127.0.0.1)" not in r.text
     assert servicio.indice.obtener(run_id).estado == "ficha"
 
 

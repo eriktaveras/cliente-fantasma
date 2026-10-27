@@ -77,13 +77,14 @@ async def destino(remoto: Remoto, inseguro: bool = False) -> tuple[str, str, str
     try:
         ips = await resolver(u.hostname, puerto or (443 if u.scheme == "https" else 80))
     except OSError as exc:
-        raise ErrorTecnico(f"remoto: no resuelve {u.hostname}: {exc}") from exc
+        raise ErrorTecnico(f"remoto: no resuelve {u.hostname}") from exc
     if not ips:
         raise ErrorTecnico(f"remoto: {u.hostname} no tiene direcciones")
     if not inseguro:
         internas = [ip for ip in ips if not _permitida(ipaddress.ip_address(ip.split("%")[0]))]
         if internas:
-            raise URLNoPermitida(f"remoto: {u.hostname} resuelve a una dirección no pública ({', '.join(internas)})")
+            # Sin las IPs: el mensaje llega al usuario y serviría para mapear la red interna.
+            raise URLNoPermitida(f"remoto: {u.hostname} resuelve a una dirección no pública")
     ip = ips[0]
     hostport = (f"[{ip}]" if ":" in ip else ip) + (f":{u.port}" if u.port else "")
     return urlunsplit((u.scheme, hostport, u.path or "/", u.query, "")), u.netloc, u.hostname

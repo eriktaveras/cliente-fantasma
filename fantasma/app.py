@@ -621,8 +621,10 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
             raise Rechazo("err_url_bot")
         try:
             await remoto.comprobar(Remoto(url=url, encabezados=encabezados), inseguro)
-        except (ErrorTecnico, ValueError) as exc:
-            raise Rechazo("err_url_bot_rechazada", str(exc)) from None
+        except remoto.URLNoPermitida:
+            raise Rechazo("err_url_bot_privada") from None
+        except (ErrorTecnico, ValueError):
+            raise Rechazo("err_url_bot_rechazada") from None
 
     def validar_prompt(request: Request, prompt: str) -> None:
         if not prompt.strip():

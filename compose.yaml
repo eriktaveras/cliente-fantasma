@@ -25,6 +25,12 @@ services:
         max-file: "3"
     # El pool de subredes de Docker del Beelink está lleno: se reutiliza el bridge por defecto.
     network_mode: bridge
+    # DNS público: el resolvedor de la LAN y sus dominios de búsqueda dejarían a un webhook ajeno sondear nombres del homelab.
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+    dns_search:
+      - .
     env_file: .env
     volumes:
       # Directorio, no archivo: cada corrida es runs/<id>/ y el índice vive en runs/indice.sqlite.
