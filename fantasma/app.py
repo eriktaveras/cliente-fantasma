@@ -207,6 +207,8 @@ def rechazo_legible(motivo: str, t: dict) -> str:
     r = t["rechazo"]
     if m := re.match(r"etapa A: (\d+(?:\.\d+)?) vs (\d+(?:\.\d+)?)", motivo):
         return r["etapa_a"].format(cand=round(100 * float(m[1])), act=round(100 * float(m[2])))
+    if "rompe críticos" in motivo:
+        return r["critico"]
     for prefijo, clave in (("etapa B", "etapa_b"), ("demasiado largo", "largo"), ("filtra", "filtra")):
         if motivo.startswith(prefijo):
             return r[clave]

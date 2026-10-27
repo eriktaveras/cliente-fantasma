@@ -665,7 +665,8 @@
       "etapa_b": "No mejoró lo suficiente en el conjunto de entrenamiento completo.",
       "largo": "La propuesta superó el largo máximo permitido.",
       "filtra": "La propuesta copiaba datos de las conversaciones de prueba.",
-      "otro": "No pasó la validación automática."
+      "otro": "No pasó la validación automática.",
+      "critico": "Rompió un caso crítico que antes pasaba."
     },
     "nota_dialectos": "Los clientes fantasma escriben en español regional (RD, MX, CO, AR, ES) a propósito: el producto es para pequeños negocios de Latinoamérica.",
     "err_completa_reservada": "El análisis completo está reservado para cuentas autorizadas. Usa el rápido."
@@ -1336,7 +1337,8 @@
       "etapa_b": "It didn't improve enough on the full training set.",
       "largo": "The proposal exceeded the maximum allowed length.",
       "filtra": "The proposal copied data from the test conversations.",
-      "otro": "It didn't pass automatic validation."
+      "otro": "It didn't pass automatic validation.",
+      "critico": "It broke a critical case that used to pass."
     },
     "nota_dialectos": "Ghost customers write in regional Spanish (DR, MX, CO, AR, ES) by design: the product targets Latin American small businesses.",
     "err_completa_reservada": "The full analysis is reserved for authorized accounts. Use the quick one."

@@ -439,6 +439,7 @@ def test_rechazo_y_markdown_legibles_en_la_boleta():
     en = web.TEXTOS["en"]
     assert web.rechazo_legible("etapa A: 0.172 vs 0.349", en).startswith("On the quick check the candidate scored 17 vs 35")
     assert web.rechazo_legible("etapa B: no mejora", en) == en["rechazo"]["etapa_b"]
+    assert web.rechazo_legible("etapa B: rompe críticos que pasaban: caso-1", en) == en["rechazo"]["critico"]
     assert web.rechazo_legible("algo interno", en) == en["rechazo"]["otro"]
     assert web.sin_markdown("Llega en **1 y 2 días**\n- envío gratis") == "Llega en 1 y 2 días\n• envío gratis"
 
