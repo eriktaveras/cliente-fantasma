@@ -90,5 +90,5 @@ def test_cobertura_incompleta_visible_en_boleta(cliente, servicio):
     lanzar(cliente, servicio, run_id)
     servicio.indice.actualizar(run_id, estado="error", motivo="interrumpida")
     r = cliente.get(f"/corrida/{run_id}/boleta")
-    assert r.status_code == 200 and "Evaluación incompleta" in r.text
+    assert r.status_code == 200 and "Boleta parcial" in r.text
     assert "Cobertura de la evaluación" in r.text

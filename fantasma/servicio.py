@@ -155,7 +155,12 @@ class Servicio:
         d = self.config_base.model_dump(mode="json")
         d["casos"] = {**d["casos"], "cantidad": t.casos}
         d["presupuesto"] = {**d["presupuesto"], "max_iterations": t.iteraciones}
-        d["optimizacion"] = {**d["optimizacion"], "medir_ruido": t.medir_ruido, "criticos_rotos_tolerados": t.criticos_rotos_tolerados}
+        # Que un solo caso cambie de resultado mueve el puntaje ~1/train: una mejora menor que eso es ruido.
+        train = max(1, round(t.casos * (1 - d["casos"]["holdout"])))
+        d["optimizacion"] = {
+            **d["optimizacion"], "medir_ruido": t.medir_ruido, "criticos_rotos_tolerados": t.criticos_rotos_tolerados,
+            "min_improvement": max(d["optimizacion"]["min_improvement"], round(1 / train, 3)),
+        }
         if modo == "remoto":
             if not url_bot:
                 raise ValueError("El modo remoto necesita la URL del webhook de tu bot")

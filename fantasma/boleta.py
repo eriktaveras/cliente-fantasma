@@ -125,23 +125,24 @@ def _por_caso(evals: list[EvaluacionRep]) -> dict[str, list[EvaluacionRep]]:
     return por_caso
 
 
-def _evaluaciones_validas(store: Store, spec: Spec, v: int) -> list[EvaluacionRep]:
+def _evaluaciones_validas(store: Store, spec: Spec, v: int, split: str | None = None) -> list[EvaluacionRep]:
     config_path = store.dir / "config.yaml"
     config = yaml.safe_load(config_path.read_text()) or {} if config_path.exists() else {}
     reps = int(config.get("repetitions_per_case", 1))
-    casos = {c.id for c in spec.casos}
+    casos = {c.id for c in spec.casos if split is None or c.split == split}
     return [e for e in store.evaluaciones(v) if e.caso_id in casos and 0 <= e.repeticion < reps]
 
 
-def nota_version(store: Store, v: int) -> NotaVersion:
-    """Sobre todas las conversaciones evaluadas de la versión (train y holdout): promedio por caso y luego entre casos."""
+def nota_version(store: Store, v: int, split: str | None = None) -> NotaVersion:
+    """Promedio por caso y luego entre casos, sobre train y holdout o solo sobre `split`."""
     spec = store.cargar_spec()
     config_path = store.dir / "config.yaml"
     config = yaml.safe_load(config_path.read_text()) or {} if config_path.exists() else {}
     reps = int(config.get("repetitions_per_case", 1))
-    solicitados = int(config.get("casos", {}).get("cantidad", len(spec.casos)))
+    casos = [c for c in spec.casos if split is None or c.split == split]
+    solicitados = len(casos) if split else int(config.get("casos", {}).get("cantidad", len(spec.casos)))
     # Las repeticiones adicionales para medir ruido no forman parte de la nota de validación.
-    evals = _evaluaciones_validas(store, spec, v)
+    evals = _evaluaciones_validas(store, spec, v, split)
     por_caso = _por_caso(evals)
     return NotaVersion(
         version=v,
@@ -149,7 +150,7 @@ def nota_version(store: Store, v: int) -> NotaVersion:
         casos=len(por_caso),
         pasan=sum(all(e.paso for e in es) for es in por_caso.values()),
         criticas=sum(any(e.critica for e in es) for es in por_caso.values()),
-        cobertura=cobertura(spec.casos, evals, reps, solicitados),
+        cobertura=cobertura(casos, evals, reps, solicitados),
     )
 
 
@@ -163,10 +164,10 @@ def veredicto(n: NotaVersion) -> Veredicto:
     return "ajustes"
 
 
-def _criterios(store: Store, spec: Spec, antes: int, despues: int) -> list[NotaCriterio]:
+def _criterios(store: Store, spec: Spec, antes: int, despues: int, split: str | None = None) -> list[NotaCriterio]:
     def medias(v: int) -> dict[str, int]:
         puntos: dict[str, list[int]] = defaultdict(list)
-        for e in _evaluaciones_validas(store, spec, v):
+        for e in _evaluaciones_validas(store, spec, v, split):
             for p in e.juez.criterios if e.juez else []:
                 puntos[p.criterio].append(p.puntaje)
         return {k: round(100 * (mean(x) - 1) / 4) for k, x in puntos.items()}
@@ -371,9 +372,17 @@ def armar(store: Store, *, run_id: str, modo: str, estado: str, costo_usd: float
     spec = store.cargar_spec()
     if not store.evaluaciones(0):
         raise ValueError(f"La corrida {run_id} no tiene conversaciones evaluadas todavía")
-    v_mejor = 0 if modo == "remoto" else mejor_version(store.versiones())
-    inicial, mejor = nota_version(store, 0), nota_version(store, v_mejor)
-    clave = veredicto(mejor) if estado == "terminada" else "incompleta"
+    # Una corrida cortada (tope, fallo al proponer) no valida ninguna versión nueva, pero si v000 quedó medida entera su
+    # veredicto vale: el dueño ya pagó esa medición.
+    v_mejor = 0 if modo == "remoto" or estado != "terminada" else mejor_version(store.versiones())
+    # Con una versión mejorada, antes y después se comparan solo en holdout: el train sirvió para elegirla.
+    split = "holdout" if v_mejor else None
+    inicial, mejor = nota_version(store, 0, split), nota_version(store, v_mejor, split)
+    clave = veredicto(mejor)
+    if estado in ("presupuesto", "error") and clave == "listo":
+        clave = "ajustes"  # Una corrida cortada nunca aprueba al bot, aunque v000 saliera perfecta.
+    elif estado not in ("terminada", "presupuesto", "error"):
+        clave = "incompleta"
     return Boleta(
         run_id=run_id,
         negocio=spec.rubro.negocio,
@@ -383,7 +392,7 @@ def armar(store: Store, *, run_id: str, modo: str, estado: str, costo_usd: float
         mejor=mejor,
         veredicto=clave,
         veredicto_texto=TEXTO_VEREDICTO[clave],
-        criterios=_criterios(store, spec, 0, v_mejor),
+        criterios=_criterios(store, spec, 0, v_mejor, split),
         # Las fallas del bot tal como llegó: es lo que el dueño necesita ver antes del parche.
         fallas=peores_fallas(store, spec, 0),
         por_eje=por_eje(store, spec, 0),

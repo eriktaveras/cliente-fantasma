@@ -8,6 +8,7 @@ from fantasma.motor import evaluar, generador, loop
 from fantasma.motor.esquemas import EvaluacionRep, VersionPrompt
 from fantasma.motor.llm import ErrorTecnico
 from fantasma.motor.storage import Store
+from tests.test_servicio import precios, servicio  # noqa: F401
 
 
 def evaluada(caso_id, rep=0, version=0):
@@ -144,7 +145,8 @@ def test_corrida_interrumpida_no_declara_listo_aunque_base_este_completa(spec, t
         store.guardar_evaluacion(evaluada(caso.id))
     b = boleta.armar(store, run_id="r", modo="generado", estado=estado, costo_usd=0, modelos={})
     assert b.mejor.cobertura.completa and b.mejor.nota == 100
-    assert b.veredicto == "incompleta"
+    # Cortada con v000 entera: hay veredicto, pero nunca "listo". En curso: incompleta.
+    assert b.veredicto == ("incompleta" if estado == "corriendo" else "ajustes")
 
 
 @pytest.mark.parametrize("limite_diario,limite_ip,patron", [(1, 10, "diario"), (10, 1, "visitante")])
@@ -194,3 +196,29 @@ def test_reserva_cruza_medianoche_sin_perder_limite_ni_gasto(tmp_path, monkeypat
     assert indice.obtener("a").costo_usd == pytest.approx(.5)
     hoy[0] = "2026-10-14"
     assert indice.gasto_del_dia() == pytest.approx(.3)
+
+
+def test_antes_y_despues_de_una_mejora_se_comparan_solo_en_holdout(spec, tmp_path):
+    store = Store(tmp_path)
+    store.guardar_spec(spec)
+    holdout = {c.id for c in spec.casos if c.split == "holdout"}
+    assert holdout and len(holdout) < len(spec.casos)
+    store.guardar_version(VersionPrompt(n=0, estado="base", holdout=0.5), spec.prompt_base)
+    store.guardar_version(VersionPrompt(n=1, estado="aceptada", holdout=1.0), spec.prompt_base + "\nEscala las quejas.")
+    for caso in spec.casos:
+        # v000 perfecta en train y floja en holdout; v001 perfecta en todo.
+        base = evaluada(caso.id)
+        if caso.id in holdout:
+            base = base.model_copy(update={"puntaje": 0.5, "paso": False})
+        store.guardar_evaluacion(base)
+        store.guardar_evaluacion(evaluada(caso.id, version=1))
+    b = boleta.armar(store, run_id="r", modo="generado", estado="terminada", costo_usd=0, modelos={})
+    assert b.mejor.version == 1
+    assert (b.inicial.casos, b.mejor.casos) == (len(holdout), len(holdout))
+    assert (b.inicial.nota, b.mejor.nota) == (50, 100)
+
+
+def test_mejora_minima_no_baja_del_peso_de_un_caso(servicio):
+    config = servicio._config("generado", "ligera", None, None)
+    train = round(15 * (1 - config.casos.holdout))
+    assert config.optimizacion.min_improvement >= round(1 / train, 3)
