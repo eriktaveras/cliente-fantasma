@@ -317,3 +317,19 @@ def test_producto_gratis_entra_al_catalogo():
     ficha = Ficha(negocio="DjangoBlaze", descripcion="d", rubro="software", productos=[Producto(nombre="Completa", precio=Decimal(99)), Producto(nombre="Gratis", precio=Decimal(0))])
     datos = a_datos(ficha, a_rubro(ficha))
     assert sorted(i.precio for i in datos.catalogo) == [Decimal(0), Decimal(99)]
+
+
+# ---------------------------------------------------------------- optimizador: contexto copiado en la propuesta
+
+
+def test_propuesta_no_arrastra_el_contexto_del_optimizador():
+    from fantasma.motor.optimizador import limpiar_prompt
+
+    base = "Eres el asistente de Bluebird Store.\nResponde corto y escala las quejas."
+    copiado = base + "\n\n## Rúbrica\n\n- no_inventa: no cumple: 'a 900'\n\n## Reglas críticas (no se pueden quitar)\n\n- No inventes."
+    assert limpiar_prompt(copiado) == base
+    assert limpiar_prompt("<prompt_actual>\n" + base + "\n</prompt_actual>") == base
+    assert limpiar_prompt("## Prompt actual\n\n" + base + "\n\n## Lecciones\n\n- algo") == base
+    # Un encabezado propio del prompt que no es de contexto se respeta.
+    propio = base + "\n\n## Horarios\n\nLunes a sábado."
+    assert limpiar_prompt(propio) == propio

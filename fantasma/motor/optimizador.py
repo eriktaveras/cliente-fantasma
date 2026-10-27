@@ -23,7 +23,7 @@ Tu trabajo:
 1. Diagnostica la causa MÁS PROBABLE de los fallos (qué del prompt falta, sobra, es ambiguo o se contradice).
 2. Propón UN SOLO cambio enfocado y general: una regla de conducta que sirva a cualquier cliente, no un parche para una conversación concreta.
 3. Escribe la hipótesis: qué esperas que mejore y por qué.
-4. Devuelve el prompt COMPLETO nuevo (no un diff), igual al actual salvo por tu cambio.
+4. Devuelve el prompt COMPLETO nuevo (no un diff), igual al actual salvo por tu cambio. El prompt actual es solo lo que va entre <prompt_actual> y </prompt_actual>: el resto del mensaje (rúbrica, reglas críticas, resultados, conversaciones, historial, lecciones) es contexto para ti y NUNCA se copia al prompt.
 
 Restricciones:
 - No quites ni debilites las reglas críticas. El runtime las añade como bloque de sistema protegido, fuera del texto editable. No puedes anularlas ni crear excepciones.
@@ -45,7 +45,7 @@ async def proponer(
     max_tokens = ctx.config.optimizacion.max_prompt_tokens
     spec: Spec = ctx.spec
     partes = [
-        "## Prompt actual\n\n" + prompt_actual,
+        "## Prompt actual\n\n<prompt_actual>\n" + prompt_actual + "\n</prompt_actual>",
         "## Rúbrica\n\n" + _rubrica(spec.rubrica),
         "## Reglas críticas (no se pueden quitar)\n\n" + ("\n".join(f"- {r.texto}" for r in spec.rubro.reglas if r.critica) or "(ninguna)"),
         "## Resultados en entrenamiento\n\n" + _agregado(agregado),
@@ -57,7 +57,22 @@ async def proponer(
         {"role": "system", "content": SISTEMA.format(max_tokens=max_tokens, max_chars=int(max_tokens * 3.5))},
         {"role": "user", "content": "\n\n".join(partes)},
     ]
-    return await ctx.llm.estructurado("optimizador", mensajes, Propuesta)
+    p = await ctx.llm.estructurado("optimizador", mensajes, Propuesta)
+    return p.model_copy(update={"prompt": limpiar_prompt(p.prompt)})
+
+
+CONTEXTO = ("Prompt actual", "Rúbrica", "Reglas críticas", "Resultados en entrenamiento", "Conversaciones con fallos", "Historial de versiones", "Lecciones")
+_CORTE = re.compile(r"^#{1,3}\s*(" + "|".join(re.escape(c) for c in CONTEXTO) + r")\b", re.MULTILINE | re.IGNORECASE)
+
+
+def limpiar_prompt(texto: str) -> str:
+    """Los modelos tienden a devolver el prompt con el contexto pegado detrás: la rúbrica trae ejemplos de precios falsos."""
+    texto = texto.replace("<prompt_actual>", "").replace("</prompt_actual>", "").strip()
+    m = _CORTE.search(texto)
+    if m and m.start() == 0:
+        texto = texto[m.end():].lstrip()
+        m = _CORTE.search(texto)
+    return (texto[: m.start()] if m else texto).rstrip()
 
 
 def _rubrica(r: Rubrica) -> str:
