@@ -20,7 +20,7 @@ Recording plan only: this file is not a completed video. Use English narration/c
 - Translate Spanish customer messages into English captions where needed.
 - Use original/permitted assets. Avoid background music or logos unless usage rights are confirmed.
 - Target 1080p and **2:50**, remaining below the three-minute requirement after intros/outros.
-- Upload to YouTube with **Public** visibility, test playback while signed out, and paste the actual URL in `docs/devpost.md` and the Devpost form. An unlisted/private video does not establish compliance with the published public-video requirement.
+- Upload to YouTube or Vimeo as **Public** or **Unlisted** (no password), as the Devpost form allows. Test playback while signed out and paste the actual URL in `docs/devpost.md` and the Devpost form. Only the first three minutes are reviewed.
 - A video does not replace working judge access: supply the judge account privately in Devpost and keep the app available through December 15, 2026.
 
 ## Plan A: a real, honest improvement
