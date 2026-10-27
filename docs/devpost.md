@@ -75,6 +75,8 @@ The operator must keep the hosted project free and available to judges through *
 - `main` at the published commit is deployed; the offline suite gives **423 passed, 1 skipped**.
 - The judge account signs in on the hosted app and reaches **My analyses**.
 - The hosted app sees each visitor's real IP behind Cloudflare, so per-visitor caps no longer behave as a global lock.
+- Public sample ([read-only report](https://fantasma.eriktaveras.com/b/W3DT5CKunbqr9zsmYh2Bx3N-)): Bluebird Store, **Business facts only**, Quick. 15/15 cases, 41/100, US$0.53. The prototype invented products and prices (for example a US$42 backpack) that are not in the profile; the one proposed fix broke two critical cases that were passing and was rejected.
+- Judge-account sample: Bluebird Store, **I already have instructions**, Full, with a prompt seeded with two common mistakes (no human handoff; long bulleted answers). 40/40 cases, 18/100, US$2.33. Two proposals were clean and focused (drop the long-list rule; answer in 1–3 sentences); both were rejected because they broke a critical case or scored lower. The run stopped on a plateau instead of claiming a fix.
 
 ## Technical verification — October 14, 2026
 

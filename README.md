@@ -14,7 +14,7 @@ Built for the **Nebius x NVIDIA Global AI Hackathon** (track: *Best Apps and Age
 ## Try the demo / judging instructions
 
 - **Live app (English):** https://fantasma.eriktaveras.com/idioma/en?volver=/
-- **Read-only live example:** [October 14 Nebius run](https://fantasma.eriktaveras.com/b/7E2rUIHGg4a_4bO4K02oQ5ax) — fictitious business, 15/15 evaluated cases, observed cost US$0.464. This single measurement is not a runtime, cost or accuracy guarantee.
+- **Read-only live example:** [October 27 Nebius run](https://fantasma.eriktaveras.com/b/W3DT5CKunbqr9zsmYh2Bx3N-) — fictitious Bluebird Store, Quick run, 15/15 evaluated cases, score 41/100, observed cost US$0.53. The generated prototype invented a product table with prices that are not in the profile. This single measurement is not a runtime, cost or accuracy guarantee.
 - **Public source:** https://github.com/eriktaveras/cliente-fantasma · [MIT](LICENSE)
 - **Track:** Best Apps and Agents.
 - The landing page and **View sample report** are public and read-only: they never create analyses or call inference APIs. Sign in with an account to create and run analyses; no manual approval is required. New accounts use a name, email and a 12–128 character password. Passwords use Argon2id; hashed, revocable session tokens and account-owned analyses persist in `runs/indice.sqlite`. No email confirmation or password-reset email service is configured in this release. Existing run, daily and visitor spending caps remain enforced after sign-in.
