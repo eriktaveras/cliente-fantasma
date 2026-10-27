@@ -497,12 +497,12 @@
       "identidad": "Datos de tu cuenta",
       "privacidad": "Tus instrucciones permanecen en tu informe privado. Comparte solo los resultados que el enlace público permite ver.",
       "demo": "Ver informe de ejemplo",
-      "sin_registro": "sin registro"
+      "sin_registro": "El informe de ejemplo no pide registro."
     },
     "landing": {
       "rotulo": "PRUEBAS PARA AGENTES DE VENTAS",
-      "titulo": "Encuentra los errores antes que tus clientes.",
-      "bajada": "Convierte los datos de tu negocio en clientes sintéticos que ponen a prueba instrucciones y bots. Descubre precios inventados, promesas no autorizadas y fallos con evidencia.",
+      "titulo": "Pon a prueba tu chatbot de ventas con clientes sintéticos.",
+      "bajada": "Clientes fantasma en cinco dialectos del español atacan a tu bot de WhatsApp con los datos reales de tu negocio. Descubre precios inventados y promesas no autorizadas, con el mensaje exacto como prueba.",
       "cta": "Crear mi primera prueba",
       "ver": "Ver cómo funciona",
       "nav_producto": "El producto",
@@ -606,7 +606,8 @@
           "¿Quién puede ver mis resultados?",
           "Los análisis pertenecen a tu cuenta. Un enlace compartido permite leer el informe; en modo prompt excluye instrucciones, diff y conversaciones. La demo pública es un informe ya calculado. Para ejecutar nuevas pruebas debes iniciar sesión."
         ]
-      ]
+      ],
+      "tecnologia_tavily": "Investigación web con Tavily"
     },
     "panel": {
       "rotulo": "TU ESPACIO DE PRUEBAS",
@@ -1167,12 +1168,12 @@
       "identidad": "Account details",
       "privacidad": "Your instructions stay in your private report. Share only the results available through the public link.",
       "demo": "View sample report",
-      "sin_registro": "no signup"
+      "sin_registro": "The sample report needs no signup."
     },
     "landing": {
       "rotulo": "TESTING FOR SALES AGENTS",
-      "titulo": "Find the failures before your customers do.",
-      "bajada": "Turn business facts into synthetic customers that test your instructions and bots. Find invented prices, unauthorized promises and failures backed by evidence.",
+      "titulo": "Stress-test your sales chatbot with synthetic customers.",
+      "bajada": "Ghost customers in five Spanish dialects attack your WhatsApp bot using your real business facts. Catch invented prices and unauthorized promises, with the exact message as proof.",
       "cta": "Create my first test",
       "ver": "See how it works",
       "nav_producto": "The product",
@@ -1276,7 +1277,8 @@
           "Who can see my results?",
           "Analyses belong to your account. A shared link allows reading the report; prompt-mode reports omit instructions, diffs and conversations. The public demo is a completed report. Sign in to run new tests."
         ]
-      ]
+      ],
+      "tecnologia_tavily": "Tavily web research"
     },
     "panel": {
       "rotulo": "YOUR TESTING WORKSPACE",
