@@ -23,7 +23,7 @@ Built for the **Nebius x NVIDIA Global AI Hackathon** (track: *Best Apps and Age
 
 
 - From **My analyses**, choose **New analysis**. Select **Business facts only**, **I already have instructions**, or **I have a live bot**. Click **Use an example** for Bluebird Store, a fictitious accessories shop with USD prices, or supply your business facts. Prompt mode also requires your instructions; the live-bot mode requires a webhook.
-- Review the business card, then choose **Light** and launch. Watch conversations and evaluations arrive, then open the report card. Inspect coverage and the quoted failures before interpreting the score; an interrupted or incomplete run cannot approve a bot. Copy/export controls are available on the report.
+- Review the business card, then choose **Quick** and launch. Watch conversations and evaluations arrive, then open the report card. Inspect coverage and the quoted failures before interpreting the score; an interrupted or incomplete run cannot approve a bot. Copy/export controls are available on the report.
 - **Business facts only** creates and evaluates instructions using a prototype. **I already have instructions** compares your prompt in the configured model/tool environment, not in your production integration. **I have a live bot** audits actual webhook responses and provides unvalidated recommendations; it does not install changes.
 - **How it works** lists the models currently configured. The hackathon deployment must keep NVIDIA Nemotron on Nebius Token Factory active throughout judging; running the optional local provider alone does not meet that requirement.
 - Daily/visitor budget limits may temporarily block new runs. The operator must provide judges with working account access and sufficient budget through **December 15, 2026**; limits are not an excuse for an inaccessible submission.
@@ -162,9 +162,9 @@ These are historical measurements, not performance or invoice guarantees for the
 | What | Cost | Time |
 |---|---|---|
 | Business card (1 Ultra call) | US$0.004–0.010 (US$0.022 with a retry) | ~10 s |
-| Light run, generated bot: 15 ghosts, 1 optimization round | **US$0.45–0.52** | 3–3.6 min |
-| Light run, Bring your bot (webhook): 15 ghosts + suggested fix | **US$0.22–0.26** | 1.5–2.5 min |
-| Light run budget cap (hard stop, partial report card) | US$1.00 | |
+| Quick run, generated bot: 15 ghosts, 1 optimization round | **US$0.45–0.52** | 3–3.6 min |
+| Quick run, Bring your bot (webhook): 15 ghosts + suggested fix | **US$0.22–0.26** | 1.5–2.5 min |
+| Quick run budget cap (hard stop, partial report card) | US$1.00 | |
 | Full run: 40 ghosts, 3 rounds | capped at US$3.00 | |
 | One Bring-your-bot conversation, simulated + judged | ~US$0.012 | |
 

@@ -52,31 +52,41 @@ The specific intended impact is earlier detection of pricing and policy failures
 
 Cliente Fantasma reuses the author's own *cuna* prompt-optimization engine. The project record describes that base engine as written in October 2026. The hackathon-specific work includes business-card extraction, synthetic-customer axes, the sales rubric, the existing-bot webhook, budgeted service, live web interface and shareable reports.
 
-The October 14 changes add coverage integrity, stronger grounded evaluation, product–price association checks, protected critical rules, conservative request reservations, daily accounting, deployment hardening and backup restoration. The frontend was restructured into a coherent four-stage desktop/mobile workflow. These are substantial application changes rather than a reskin of the engine. If any base project actually predates **August 26, 2026**, confirm its original date and keep this explanation of the additions made during the submission period.
+The October 14 changes add coverage integrity, stronger grounded evaluation, product–price association checks, protected critical rules, conservative request reservations, daily accounting, deployment hardening and backup restoration. The frontend was restructured into a coherent four-stage desktop/mobile workflow. These are substantial application changes rather than a reskin of the engine.
+
+The October 15–27 changes replace the shared demo password with accounts (Argon2id, revocable sessions, account-owned analyses), add a public landing page and read-only sample report, reserve budget for judge accounts, keep the optimizer's evaluation context out of proposed prompts, compare improvements on holdout cases only, and localize limits, rejection reasons and report criteria into English.
 
 ## Testing instructions for Devpost (private field)
 
-1. Open the English demo URL above and click **View sample report** to read a completed analysis without signup or new inference. To run a new analysis, sign in with the judge account provided privately in the submission access instructions, or create an account. No manual approval is required. Do not show real credentials in screenshots or video.
+1. Open the English demo URL above and click **View sample report** to read a completed analysis without signup or new inference. To run a new analysis, click **Sign in** and use the judge account below. Judge accounts have a reserved daily budget, are exempt from per-visitor caps and are the only accounts that can launch **Full** analyses. Public sign-up also works, with a smaller shared budget.
+
+   - Email: `judges@eriktaveras.com`
+   - Password: *(paste from the operator's private credentials file; never commit it)*
 2. Choose **Business facts only**, click **Use an example**, and review the fictitious Bluebird Store profile. **I already have instructions** tests a pasted prompt in the simulated environment; **I have a live bot** audits a webhook.
-3. Select **Light** and launch. Watch conversations/evaluations; open the report when the run stops. Runtime varies and model requests are subject to a US$1 run cap.
+3. Select **Quick** (or **Full**, 3 improvement rounds, US$3 cap) and launch. Watch conversations/evaluations; open the report when the run stops. Runtime varies and model requests are subject to a US$1 run cap.
 4. Inspect coverage, exact failure messages, prompt-validation status, export and sharing controls. A budget stop produces a partial report, not a passing result.
 5. Use **How it works** to inspect active models. For an existing bot, use **I have a live bot** with the README webhook contract.
 6. If testing locally, follow the README setup, set a valid `NEBIUS_API_KEY`, copy `config.example.yaml` to `config.yaml`, and use pasted example data; Tavily is optional.
 
 The operator must keep the hosted project free and available to judges through **December 15, 2026**, provide clear account-access instructions in the submission and ensure budget limits do not prevent their evaluation.
 
+## Technical verification — October 27, 2026
+
+- `main` at the published commit is deployed; the offline suite gives **423 passed, 1 skipped**.
+- The judge account signs in on the hosted app and reaches **My analyses**.
+- The hosted app sees each visitor's real IP behind Cloudflare, so per-visitor caps no longer behave as a global lock.
+
 ## Technical verification — October 14, 2026
 
 - Public GitHub repository verified accessible with GitHub-detected MIT license.
 - Deployed configuration verified: all six roles use NVIDIA Nemotron Nano/Ultra through Nebius Token Factory; the local Ornith provider is inactive.
-- Both configured models returned successful live inference responses. A complete Light run through the hosted app finished with 15/15 cases and 15/15 required repetitions, at an observed US$0.463754. [Read-only report with fictitious business data](https://fantasma.eriktaveras.com/b/7E2rUIHGg4a_4bO4K02oQ5ax). The generated bot scored 26/100 with 11 critical failures; its prompt proposal was rejected. This demonstrates detection and transparent reporting, not successful model remediation or calibrated accuracy.
+- Both configured models returned successful live inference responses. A complete Quick run through the hosted app finished with 15/15 cases and 15/15 required repetitions, at an observed US$0.463754. [Read-only report with fictitious business data](https://fantasma.eriktaveras.com/b/7E2rUIHGg4a_4bO4K02oQ5ax). The generated bot scored 26/100 with 11 critical failures; its prompt proposal was rejected. This demonstrates detection and transparent reporting, not successful model remediation or calibrated accuracy.
 - Production Docker test target: **385 passed, 1 skipped**. The skipped opt-in live test was covered separately by the hosted end-to-end run; it remains skipped in the offline suite.
 - English demo route and public report returned HTTP 200; the shared report was visually checked at a 390px mobile width.
-- Code/UX/doc changes remain uncommitted on `design/ux-frontend-20261014`; the public default branch has not yet been updated to this release.
 
 ## Submission items still requiring release or author input
 
-- [ ] Commit/publish the current audited code and UX to the public repository, then verify that the submitted branch contains this version and GitHub shows MIT.
+- [x] Commit/publish the current audited code and UX to the public repository (October 27, `main`).
 - [ ] Paste a real public YouTube video URL below three minutes. Show the app working, the active Nemotron models and their runtime use of Token Factory. All narration/captions and submission materials must be English or include an English translation.
 - [ ] Test the read-only public sample from a fresh browser, plus judge login and the registration-to-analysis flow, and update Devpost with the current access instructions.
 - [ ] Confirm personal/team eligibility and any pre-existing project dates; select a Builders & Brews city only if actually attended.
