@@ -170,7 +170,7 @@ These are historical measurements, not performance or invoice guarantees for the
 
 Breakdown of the latest measured light run with the generated bot (US$0.52, 3.6 min, 26 conversations): card 0.009 · case generator 0.053 · ghosts 0.212 · bot (Nano) 0.050 · judge 0.170 · optimizer 0.026. The bot is 10% of the cost: what you pay for is the synthetic customers and the judge, which is exactly where the big model earns its place.
 
-Before every model request, including profile creation and retries, the service reserves a conservative input/output allowance against run, daily and visitor budgets. Requests without confirmed token usage are accounted conservatively at their reserved amount. Reports keep observed scores but cannot approve incomplete coverage. The demo also has a global daily cap (`TOPE_DIARIO_USD`, default US$10), a visitor daily cap (`TOPE_IP_USD`, default US$4; IPv6 counts per /64), one active run per visitor and `CORRIDAS_POR_DIA` (default 5). Daily accounting uses the spending date, including profiles created on earlier days. Tavily remains an estimate (`TAVILY_USD_FICHA`, default US$0.02), not a guarantee of its final invoice.
+Before every model request, including profile creation and retries, the service reserves a conservative input/output allowance against run, daily and visitor budgets. Requests without confirmed token usage are accounted conservatively at their reserved amount. Reports keep observed scores but cannot approve incomplete coverage. The demo also has a global daily cap (`TOPE_DIARIO_USD`, default US$10), a visitor daily cap (`TOPE_IP_USD`, default US$4; IPv6 counts per /64), one active run per visitor and `CORRIDAS_POR_DIA` (default 5). Public accounts can spend only `TOPE_PUBLICO_USD` of the daily cap; accounts listed in `FANTASMA_EMAILS_JUECES` use the remainder, are exempt from visitor caps and are the only ones that can launch a **Full** analysis. Daily accounting uses the spending date, including profiles created on earlier days. Tavily remains an estimate (`TAVILY_USD_FICHA`, default US$0.02), not a guarantee of its final invoice.
 
 Unknown model prices fail before a request. A provider can declare `precios: {model-name: [input_usd_per_million, output_usd_per_million]}`; `[0, 0]` explicitly declares a free local model. `local: true` controls API compatibility and does not imply free inference. `concurrency_global` limits simultaneous model requests across runs in the single application process.
 
@@ -192,6 +192,8 @@ TAVILY_API_KEY=your-tavily-key        # optional: without it, paste the business
 TOPE_DIARIO_USD=10                    # optional: global daily spend cap
 CORRIDAS_POR_DIA=5                    # optional: runs per visitor per day
 TOPE_IP_USD=4                         # optional: spend cap per visitor per day
+TOPE_PUBLICO_USD=2                    # optional: share of the daily cap open to public accounts
+FANTASMA_EMAILS_JUECES=judge@example.com  # optional: accounts that may run Full and use the reserved budget
 EOF
 
 set -a; . ./.env; set +a

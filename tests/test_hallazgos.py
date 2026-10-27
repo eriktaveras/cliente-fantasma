@@ -333,3 +333,28 @@ def test_propuesta_no_arrastra_el_contexto_del_optimizador():
     # Un encabezado propio del prompt que no es de contexto se respeta.
     propio = base + "\n\n## Horarios\n\nLunes a sábado."
     assert limpiar_prompt(propio) == propio
+
+
+# ---------------------------------------------------------------- reserva para jueces
+
+
+def test_completa_solo_para_jueces(servicio):
+    run_id = correr(servicio.crear_ficha([], COLMADO, "1.2.3.4"))
+    with pytest.raises(Limite) as exc:
+        correr(servicio.lanzar(run_id, "generado", "completa"))
+    assert exc.value.clave == "err_completa_reservada"
+    assert servicio.indice.obtener(run_id).estado == "ficha"
+
+
+def test_publico_no_gasta_la_reserva_de_los_jueces(servicio):
+    servicio.tope_publico, servicio.tope_ip = 0.05, 100
+
+    async def flujo(ip, juez):
+        run_id = await servicio.crear_ficha([], COLMADO, ip, juez=juez)
+        return await (await servicio.lanzar(run_id, "generado", "ligera", juez=juez))
+
+    assert correr(flujo("1.2.3.4", False)) == "presupuesto"
+    with pytest.raises((Limite, costos.PresupuestoAgotado), match="tope"):
+        correr(servicio.crear_ficha([], COLMADO, "5.6.7.8"))
+    # El juez todavía tiene presupuesto, desde la misma IP y aunque otra corrida suya siga activa.
+    assert correr(flujo("1.2.3.4", True)) == "terminada"

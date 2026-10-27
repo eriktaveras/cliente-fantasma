@@ -116,6 +116,9 @@ class Servicio:
         self.corridas_por_dia = int(os.environ.get("CORRIDAS_POR_DIA", "5"))
         # Por debajo del tope diario: un solo visitante no puede dejar la demo sin presupuesto para los demás.
         self.tope_ip = float(os.environ.get("TOPE_IP_USD", "4"))
+        # Las cuentas públicas solo gastan hasta aquí del tope diario: el resto queda reservado para los jueces, que además
+        # no tienen tope por IP ni de corridas por día.
+        self.tope_publico = float(os.environ.get("TOPE_PUBLICO_USD", "inf"))
         # Tavily no reporta costo por llamada: se carga una estimación fija por ficha para que entre en los topes.
         self.tavily_usd = float(os.environ.get("TAVILY_USD_FICHA", "0.02"))
         self._sal = os.environ.get("FANTASMA_SAL_IP", "cliente-fantasma")
@@ -144,14 +147,19 @@ class Servicio:
             raise KeyError(f"No existe la corrida {run_id}")
         return fila
 
-    def _verificar_limites(self, ip_hash: str) -> None:
-        if self.indice.activas_de(ip_hash):
+    def topes(self, juez: bool) -> tuple[float, float]:
+        """(tope diario, tope por IP) que aplican a quien lanza."""
+        return (self.tope_diario, self.tope_diario) if juez else (min(self.tope_publico, self.tope_diario), self.tope_ip)
+
+    def _verificar_limites(self, ip_hash: str, juez: bool = False) -> None:
+        tope_dia, tope_ip = self.topes(juez)
+        if self.indice.activas_de(ip_hash) and not juez:
             raise Limite("err_limite_activa", "Ya tienes una prueba en curso: espera a que termine.")
-        if self.indice.del_dia(ip_hash) >= self.corridas_por_dia:
+        if self.indice.del_dia(ip_hash) >= self.corridas_por_dia and not juez:
             raise Limite("err_limite_dia", f"Llegaste al máximo de {self.corridas_por_dia} pruebas por día.", n=self.corridas_por_dia)
-        if self.indice.gasto_del_dia() >= self.tope_diario:
+        if self.indice.gasto_del_dia() >= tope_dia:
             raise Limite("err_tope_demo", "La demo llegó a su tope de gasto de hoy. Vuelve mañana.")
-        if self.indice.gasto_del_dia_de(ip_hash) >= self.tope_ip:
+        if self.indice.gasto_del_dia_de(ip_hash) >= tope_ip:
             raise Limite("err_tope_ip", "Llegaste al tope de gasto por visitante de hoy. Vuelve mañana.")
 
     def _config(self, modo: Modo, tamaño: Tamaño, url_bot: str | None, encabezados: dict[str, str] | None) -> Config:
@@ -176,9 +184,9 @@ class Servicio:
 
     # ------------------------------------------------------------ 1. ficha
 
-    async def crear_ficha(self, urls: list[str], texto: str, ip: str, nombre: str = "", *, al_crear: Callable[[str], None] | None = None) -> str:
+    async def crear_ficha(self, urls: list[str], texto: str, ip: str, nombre: str = "", *, al_crear: Callable[[str], None] | None = None, juez: bool = False) -> str:
         ip_hash = self.hash_ip(ip)
-        self._verificar_limites(ip_hash)
+        self._verificar_limites(ip_hash, juez)
         run_id = f"{datetime.now():%Y%m%d}-{secrets.token_hex(4)}"
         self.indice.crear(run_id, ip_hash, negocio=nombre)
         if al_crear:
@@ -193,12 +201,12 @@ class Servicio:
 
         llm = costos.Medido(
             self.fabrica_llm(self.config_base), al_gastar,
-            reservar=lambda usd: self.indice.reservar(run_id, usd, self.tamaños["ligera"].tope_usd, self.tope_diario, self.tope_ip),
+            reservar=lambda usd: self.indice.reservar(run_id, usd, self.tamaños["ligera"].tope_usd, *self.topes(juez)),
             liquidar=lambda reserva, gasto: self.indice.liquidar(run_id, reserva, gasto),
         )
         try:
             # La investigación externa también consume presupuesto antes de salir.
-            self.indice.reservar(run_id, previo, self.tamaños["ligera"].tope_usd, self.tope_diario, self.tope_ip)
+            self.indice.reservar(run_id, previo, self.tamaños["ligera"].tope_usd, *self.topes(juez))
             self.indice.liquidar(run_id, previo, previo)
             ficha = await investigar(
                 llm,
@@ -260,17 +268,21 @@ class Servicio:
         url_bot: str | None = None,
         encabezados: dict[str, str] | None = None,
         prompt_usuario: str | None = None,
+        juez: bool = False,
     ) -> asyncio.Task:
         if modo not in ("generado", "prompt", "remoto"):
             raise ValueError(f"Modo de prueba desconocido: {modo}")
         fila = self._fila(run_id)
         if fila.estado != "ficha":
             raise ValueError(f"La corrida {run_id} no está esperando lanzamiento (estado {fila.estado})")
-        if self.indice.activas_de(fila.ip_hash):
+        if tamaño == "completa" and not juez:
+            raise Limite("err_completa_reservada", "El análisis completo está reservado para cuentas autorizadas.")
+        tope_dia, tope_ip = self.topes(juez)
+        if self.indice.activas_de(fila.ip_hash) and not juez:
             raise Limite("err_limite_activa", "Ya tienes una prueba en curso: espera a que termine.")
-        if self.indice.gasto_del_dia() >= self.tope_diario:
+        if self.indice.gasto_del_dia() >= tope_dia:
             raise Limite("err_tope_demo", "La demo llegó a su tope de gasto de hoy. Vuelve mañana.")
-        if self.indice.gasto_del_dia_de(fila.ip_hash) >= self.tope_ip:
+        if self.indice.gasto_del_dia_de(fila.ip_hash) >= tope_ip:
             raise Limite("err_tope_ip", "Llegaste al tope de gasto por visitante de hoy. Vuelve mañana.")
         if modo == "prompt" and not (prompt_usuario or "").strip():
             raise ValueError("El modo prompt necesita las instrucciones que quieres probar")
@@ -286,7 +298,7 @@ class Servicio:
             except Exception:
                 self.indice.actualizar(run_id, estado="ficha")
                 raise
-        tarea = asyncio.create_task(self._correr(run_id, config, modo, tamaño, fila.costo_usd, prompt_usuario))
+        tarea = asyncio.create_task(self._correr(run_id, config, modo, tamaño, fila.costo_usd, prompt_usuario, juez))
         self.tareas[run_id] = tarea
         tarea.add_done_callback(lambda _: self.tareas.pop(run_id, None))
         return tarea
@@ -299,6 +311,7 @@ class Servicio:
         tamaño: Tamaño,
         costo_previo: float,
         prompt_usuario: str | None = None,
+        juez: bool = False,
     ) -> str:
         t0 = time.monotonic()
         d = self._dir(run_id)
@@ -310,6 +323,7 @@ class Servicio:
 
         tope = self.tamaños[tamaño].tope_usd
         ip_hash = self._fila(run_id).ip_hash
+        tope_dia, tope_ip = self.topes(juez)
         def al_gastar(usd: float) -> None:
             total = costo_previo + usd
             self.indice.actualizar(run_id, costo_usd=total)
@@ -317,14 +331,14 @@ class Servicio:
             # Defensa adicional ante respuestas que superen la reserva estimada.
             if total > tope:
                 raise costos.PresupuestoAgotado(f"tope de la corrida (US${tope:.2f})")
-            if self.indice.gasto_del_dia() > self.tope_diario:
-                raise costos.PresupuestoAgotado(f"tope diario de la demo (US${self.tope_diario:.2f})")
-            if self.indice.gasto_del_dia_de(ip_hash) > self.tope_ip:
-                raise costos.PresupuestoAgotado(f"tope diario por visitante (US${self.tope_ip:.2f})")
+            if self.indice.gasto_del_dia() > tope_dia:
+                raise costos.PresupuestoAgotado(f"tope diario de la demo (US${tope_dia:.2f})")
+            if self.indice.gasto_del_dia_de(ip_hash) > tope_ip:
+                raise costos.PresupuestoAgotado(f"tope diario por visitante (US${tope_ip:.2f})")
 
         llm = costos.Medido(
             self.fabrica_llm(config), al_gastar,
-            reservar=lambda usd: self.indice.reservar(run_id, usd, tope, self.tope_diario, self.tope_ip),
+            reservar=lambda usd: self.indice.reservar(run_id, usd, tope, tope_dia, tope_ip),
             liquidar=lambda reserva, gasto: self.indice.liquidar(run_id, reserva, gasto),
         )
         progreso = lambda m: publicar("log", texto=m)

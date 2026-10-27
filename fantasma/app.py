@@ -219,6 +219,11 @@ def sin_markdown(texto: str) -> str:
     return re.sub(r"^\s*[-*]\s+", "• ", texto, flags=re.MULTILINE)
 
 
+def es_juez(usuario: dict | None) -> bool:
+    lista = {e.strip().casefold() for e in os.environ.get("FANTASMA_EMAILS_JUECES", "").split(",") if e.strip()}
+    return bool(usuario) and usuario["email"].casefold() in lista
+
+
 def cookie_sesion(request: Request) -> str:
     return "__Host-fantasma_sesion" if es_https(request) else "fantasma_sesion"
 
@@ -612,6 +617,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
             run_id = await srv(request).crear_ficha(
                 urls, datos["texto"][:MAX_TEXTO], ip_de(request), datos["nombre"][:200],
                 al_crear=lambda rid: request.app.state.cuentas.asociar(request.state.usuario["id"], [rid]),
+                juez=es_juez(request.state.usuario),
             )
         except Limite as exc:
             return pagina(request, "inicio.html", 429, error=_limite(request, exc), previas=_previas(request), datos=datos)
@@ -664,7 +670,8 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
         s = srv(request)
         pendiente = {**s.seleccion(run_id), "encabezados": {}, **request.app.state.pendientes.get(run_id, {})}
         return pagina(
-            request, "ficha.html", status, run_id=run_id, ficha=ficha or s.ficha(run_id), monedas=MONEDAS, tamaños=s.tamaños,
+            request, "ficha.html", status, run_id=run_id, ficha=ficha or s.ficha(run_id), monedas=MONEDAS,
+            tamaños=s.tamaños if es_juez(request.state.usuario) else {k: v for k, v in s.tamaños.items() if k != "completa"},
             pendiente=pendiente, encabezados_txt="\n".join(f"{k}: {v}" for k, v in pendiente["encabezados"].items()), **ctx,
         )
 
@@ -714,6 +721,7 @@ def crear_app(servicio: Servicio | None = None) -> FastAPI:
                 url_bot=url_bot or None,
                 encabezados=encabezados or None,
                 prompt_usuario=prompt or None,
+                juez=es_juez(request.state.usuario),
             )
         except Rechazo as r:
             return _vista_ficha(request, run_id, 400, ficha=datos, error=_mensaje(request, r))
